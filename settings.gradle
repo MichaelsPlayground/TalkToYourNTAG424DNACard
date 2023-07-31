@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "TalkToYourDESFireCard"
+rootProject.name = "TalkToYourNTAG424DNACard"
 include ':app'

@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace 'de.androidcrypto.talktoyourdesfirecard'
+    namespace 'de.androidcrypto.talktoyourntag424dnacard'
     compileSdk 33
 
     defaultConfig {
-        applicationId "de.androidcrypto.talktoyourdesfirecard"
+        applicationId "de.androidcrypto.talktoyourntag424dnacard"
         minSdk 21
         targetSdk 33
         versionCode 1

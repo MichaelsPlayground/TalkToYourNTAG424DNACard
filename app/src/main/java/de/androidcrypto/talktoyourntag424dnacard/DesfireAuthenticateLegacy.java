@@ -1,11 +1,8 @@
-package de.androidcrypto.talktoyourdesfirecard;
-
-import static de.androidcrypto.talktoyourdesfirecard.Utils.printData;
+package de.androidcrypto.talktoyourntag424dnacard;
 
 import android.nfc.tech.IsoDep;
 import android.text.TextUtils;
 import android.util.Log;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 
@@ -1041,7 +1038,7 @@ public class DesfireAuthenticateLegacy {
         log(methodName, printData("ct1 Xored       ", ct1Xored));
 
         log(methodName, "4 decrypt ct1Xored using TripleDES.decrypt");
-        byte[] ct1XoredDecrypted = de.androidcrypto.talktoyourdesfirecard.nfcjlib.TripleDES.decrypt(tdesKey, ct1Xored, 0, 8);
+        byte[] ct1XoredDecrypted = de.androidcrypto.talktoyourntag424dnacard.nfcjlib.TripleDES.decrypt(tdesKey, ct1Xored, 0, 8);
         log(methodName, printData("ct1Xored decrypt", ct1XoredDecrypted));
 
         log(methodName, "5 copy ct1XoredDecrypted to cipheredBlock");
@@ -1053,7 +1050,7 @@ public class DesfireAuthenticateLegacy {
         log(methodName, printData("ct2Xored        ", ct2Xored));
 
         log(methodName, "7 decrypt ct2Xored using TripleDES.decrypt");
-        byte[] ct2XoredDecrypted = de.androidcrypto.talktoyourdesfirecard.nfcjlib.TripleDES.decrypt(tdesKey, ct2Xored, 0, 8);
+        byte[] ct2XoredDecrypted = de.androidcrypto.talktoyourntag424dnacard.nfcjlib.TripleDES.decrypt(tdesKey, ct2Xored, 0, 8);
         log(methodName, printData("ct2 Xored decrypt", ct2XoredDecrypted));
 
         log(methodName, "8 Note: for more data this would be extended but we are ready now");

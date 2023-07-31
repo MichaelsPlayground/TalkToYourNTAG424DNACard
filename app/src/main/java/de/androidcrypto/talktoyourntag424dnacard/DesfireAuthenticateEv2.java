@@ -1,12 +1,10 @@
-package de.androidcrypto.talktoyourdesfirecard;
+package de.androidcrypto.talktoyourntag424dnacard;
 
-import static de.androidcrypto.talktoyourdesfirecard.Utils.byteArrayLength4InversedToInt;
-import static de.androidcrypto.talktoyourdesfirecard.Utils.byteToHex;
-import static de.androidcrypto.talktoyourdesfirecard.Utils.hexStringToByteArray;
-import static de.androidcrypto.talktoyourdesfirecard.Utils.intTo3ByteArrayInversed;
-import static de.androidcrypto.talktoyourdesfirecard.Utils.intTo4ByteArrayInversed;
-import static de.androidcrypto.talktoyourdesfirecard.Utils.printData;
-import static de.androidcrypto.talktoyourdesfirecard.Utils.removeAllNonAlphaNumeric;
+import static de.androidcrypto.talktoyourntag424dnacard.Utils.byteArrayLength4InversedToInt;
+import static de.androidcrypto.talktoyourntag424dnacard.Utils.byteToHex;
+import static de.androidcrypto.talktoyourntag424dnacard.Utils.hexStringToByteArray;
+import static de.androidcrypto.talktoyourntag424dnacard.Utils.intTo3ByteArrayInversed;
+import static de.androidcrypto.talktoyourntag424dnacard.Utils.intTo4ByteArrayInversed;
 
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;

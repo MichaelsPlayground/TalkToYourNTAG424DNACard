@@ -1,6 +1,6 @@
-package de.androidcrypto.talktoyourdesfirecard;
+package de.androidcrypto.talktoyourntag424dnacard.nfcjlib;
 
-import static de.androidcrypto.talktoyourdesfirecard.Utils.printData;
+import static de.androidcrypto.talktoyourntag424dnacard.Utils.printData;
 
 import android.util.Log;
 

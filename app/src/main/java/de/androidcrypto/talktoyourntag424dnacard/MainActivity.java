@@ -1,12 +1,11 @@
-package de.androidcrypto.talktoyourdesfirecard;
+package de.androidcrypto.talktoyourntag424dnacard;
 
-import static de.androidcrypto.talktoyourdesfirecard.Utils.byteArrayLength4InversedToInt;
-import static de.androidcrypto.talktoyourdesfirecard.Utils.byteToHex;
-import static de.androidcrypto.talktoyourdesfirecard.Utils.bytesToHexNpeUpperCase;
-import static de.androidcrypto.talktoyourdesfirecard.Utils.bytesToHexNpeUpperCaseBlank;
-import static de.androidcrypto.talktoyourdesfirecard.Utils.hexStringToByteArray;
-import static de.androidcrypto.talktoyourdesfirecard.Utils.printData;
-import static de.androidcrypto.talktoyourdesfirecard.Utils.reverseByteArrayInPlace;
+import static de.androidcrypto.talktoyourntag424dnacard.Utils.byteArrayLength4InversedToInt;
+import static de.androidcrypto.talktoyourntag424dnacard.Utils.byteToHex;
+import static de.androidcrypto.talktoyourntag424dnacard.Utils.bytesToHexNpeUpperCase;
+import static de.androidcrypto.talktoyourntag424dnacard.Utils.bytesToHexNpeUpperCaseBlank;
+import static de.androidcrypto.talktoyourntag424dnacard.Utils.hexStringToByteArray;
+import static de.androidcrypto.talktoyourntag424dnacard.Utils.printData;
 
 import android.app.Activity;
 import android.app.Dialog;

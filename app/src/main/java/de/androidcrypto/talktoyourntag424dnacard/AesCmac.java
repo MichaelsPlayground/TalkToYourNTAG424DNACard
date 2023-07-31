@@ -1,4 +1,4 @@
-package de.androidcrypto.talktoyourdesfirecard;
+package de.androidcrypto.talktoyourntag424dnacard;
 
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;

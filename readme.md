@@ -1,6 +1,17 @@
-# Talk to your Mifare DESFire EV1/EV2/EV3 card
+# Talk to your Mifare NTAG424DNA card
 
-This is a sample app to demonstrate how to work with a Mifare DESFire EV1/EV2/EV3 card. 
+This is a sample app to demonstrate how to work with a Mifare NTAG424DNA card. 
+
+## project / app status
+
+At the moment the  app is just a stub with no real functions as it is a 1:1 copy 
+of the "Talk to your Mifare DESFire EV1/EV2/EV3" project.
+
+The app description is copied as well so please do not rely on any wording or code 
+in this repo so far !
+
+
+Original description follows:
 
 For simplicity this app uses a DESFire tag with **factory settings** means:
 

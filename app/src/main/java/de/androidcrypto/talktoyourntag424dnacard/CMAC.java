@@ -1,4 +1,4 @@
-package de.androidcrypto.talktoyourdesfirecard;
+package de.androidcrypto.talktoyourntag424dnacard;
 
 /**
  * CMAC implementation according to NIST 800-38B.
