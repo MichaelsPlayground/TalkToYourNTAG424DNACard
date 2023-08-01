@@ -1,4 +1,4 @@
-# Talk to your Mifare NTAG424DNA card
+# Talk to your Mifare NTAG424 DNA card
 
 This is a sample app to demonstrate how to work with a Mifare NTAG424DNA card. 
 
