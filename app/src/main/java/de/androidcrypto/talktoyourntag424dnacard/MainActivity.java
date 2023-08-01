@@ -286,6 +286,9 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     DesfireAuthenticateLegacy desfireAuthenticateLegacy;
     DesfireAuthenticateEv2 desfireAuthenticateEv2;
 
+    private Activity activity;
+    private Ntag424DnaMethods ntag424DnaMethods;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -419,6 +422,8 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         applicationId.setText(Utils.bytesToHexNpeUpperCase(APPLICATION_IDENTIFIER));
         numberOfKeys.setText(String.valueOf((int) APPLICATION_NUMBER_OF_KEYS));
         fileStandardFileId.setText(String.valueOf((int) STANDARD_FILE_FREE_ACCESS_ID)); // preset is FREE ACCESS
+
+        activity = MainActivity.this;
 
         /**
          * just es quick test button
@@ -5043,6 +5048,10 @@ C1h =
         clearOutputFields();
         invalidateAllSelections();
         writeToUiAppend(output, "NFC tag discovered");
+
+        ntag424DnaMethods = new Ntag424DnaMethods(output, tag, activity);
+
+
         isoDep = null;
         try {
             isoDep = IsoDep.get(tag);
