@@ -1,6 +1,11 @@
 package de.androidcrypto.talktoyourntag424dnacard;
 
+import static android.content.Context.VIBRATOR_SERVICE;
+
+import android.content.Context;
 import android.os.Build;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -287,5 +292,14 @@ public class Utils {
         return target;
     }
 
+    public static void vibrateShort(Context context) {
+        // Make a Sound
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ((Vibrator) context.getSystemService(VIBRATOR_SERVICE)).vibrate(VibrationEffect.createOneShot(50, 10));
+        } else {
+            Vibrator v = (Vibrator) context.getSystemService(VIBRATOR_SERVICE);
+            v.vibrate(50);
+        }
+    }
 
  }

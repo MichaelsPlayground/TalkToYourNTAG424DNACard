@@ -3,12 +3,14 @@ package de.androidcrypto.talktoyourntag424dnacard;
 import android.app.Activity;
 import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
+import android.text.TextUtils;
 import android.util.Log;
 import android.widget.TextView;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.security.AccessControlException;
+import java.util.Arrays;
 
 /**
  * This class is taking all methods to work with NXP NTAG 424 DNA tag
@@ -79,8 +81,10 @@ public class Ntag424DnaMethods {
         }
         uid = tag.getId();
         Log.d(TAG, Utils.printData("uid", uid));
+        writeToUiAppend(textView, Utils.printData("UID", uid));
         techList = tag.getTechList();
-        // todo check for IsoDep class
+        Log.d(TAG, "techList: " + Arrays.toString(techList));
+
         try {
             isoDep = IsoDep.get(tag);
             if (isoDep == null) {
@@ -88,8 +92,10 @@ public class Ntag424DnaMethods {
                 errorCodeReason = "isoDep is NULL (maybe it is not a NTAG424DNA tag ?), aborted";
                 return false;
             }
+            Log.d(TAG, "tag is connected: " + isoDep.isConnected());
             isoDep.connect();
-            if (!isoDep.isConnected()) {
+            Log.d(TAG, "tag is connected: " + isoDep.isConnected());
+            if (isoDep.isConnected()) {
                 isIsoDepConnected = true;
                 Log.d(TAG, "tag is connected to isoDep");
             } else {
@@ -111,13 +117,19 @@ public class Ntag424DnaMethods {
                 isTagNtag424Dna = true;
                 Log.d(TAG, "tag is identified as NTAG424DNA");
                 log(methodName, versionInfo.dump());
+                errorCode = RESPONSE_OK.clone();
+                errorCodeReason = "SUCCESS";
+                writeToUiAppend(textView, versionInfo.dump());
+                Utils.vibrateShort(activity.getBaseContext());
                 return true;
             } else {
                 isTagNtag424Dna = false;
                 Log.d(TAG, "tag is NOT identified as NTAG424DNA, aborted");
+                writeToUiAppend(textView, "tag is NOT identified as NTAG424DNA, aborted");
                 log(methodName, versionInfo.dump());
                 errorCode = RESPONSE_FAILURE.clone();
                 errorCodeReason = "could not retrieve VersionInfo (maybe it is not a NTAG424DNA tag ?), aborted";
+                writeToUiAppend(textView, versionInfo.dump());
                 return false;
             }
         } catch (IOException e) {
@@ -231,6 +243,19 @@ public class Ntag424DnaMethods {
     /**
      * section for UI related tasks
      */
+
+    private void writeToUiAppend(TextView textView, String message) {
+        activity.runOnUiThread(() -> {
+            String oldString = textView.getText().toString();
+            if (TextUtils.isEmpty(oldString)) {
+                textView.setText(message);
+            } else {
+                String newString = message + "\n" + oldString;
+                textView.setText(newString);
+                System.out.println(message);
+            }
+        });
+    }
 
     private void log(String methodName, String data) {
         log(methodName, data, false);

@@ -5051,7 +5051,7 @@ C1h =
 
         ntag424DnaMethods = new Ntag424DnaMethods(output, tag, activity);
 
-
+/*
         isoDep = null;
         try {
             isoDep = IsoDep.get(tag);
@@ -5102,7 +5102,7 @@ C1h =
             writeToUiAppendBorderColor(errorCode, errorCodeLayout, "Exception: " + e.getMessage(), COLOR_RED);
             e.printStackTrace();
         }
-
+*/
     }
 
     @Override
