@@ -16,6 +16,35 @@ import java.util.Arrays;
  * This class is taking all methods to work with NXP NTAG 424 DNA tag
  */
 
+/*
+This is the complete command set per NTAG 424 DNA NT4H2421Gx.pdf datasheet
+Instruction                       CLA INS Communication mode
+AuthenticateEV2First - Part1       90  71 N/A (command specific)
+AuthenticateEV2First - Part2       90  AF
+AuthenticateEV2NonFirst - Part1    90  77 N/A (command specific)
+AuthenticateEV2NonFirst - Part2    90  AF
+AuthenticateLRPFirst - Part1       90  71 N/A (command specific)
+AuthenticateLRPFirst - Part2       90  AF
+AuthenticateLRPNonFirst - Part1    90  77 N/A (command specific)
+AuthenticateLRPNonFirst - Part2    90  AF
+ChangeFileSettings                 90  5F CommMode.Full
+ChangeKey                          90  C4 CommMode.Full
+GetCardUID                         90  51 CommMode.Full
+GetFileCounters                    90  F6
+GetFileSettings                    90  F5
+GetKeyVersion                      90  64
+GetVersion - Part1                 90  60
+GetVersion - Part2                 90  AF
+GetVersion - Part3                 90  AF
+ISOReadBinary                      00  B0
+ReadData                           90  AD
+Read_Sig                           90  3C
+ISOSelectFile                      00  A4
+SetConfiguration                   90  5C
+ISOUpdateBinary                    00  D6
+WriteData                          90  8D
+ */
+
 public class Ntag424DnaMethods {
 
     private static final String TAG = Ntag424DnaMethods.class.getName();
