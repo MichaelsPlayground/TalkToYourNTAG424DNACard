@@ -7,6 +7,8 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.security.AccessControlException;
@@ -18,7 +20,8 @@ import java.util.Arrays;
 
 /*
 This is the complete command set per NTAG 424 DNA NT4H2421Gx.pdf datasheet
-Instruction                       CLA INS Communication mode
+                                                                 Impl.
+Instruction                       CLA INS Communication mode     Status
 AuthenticateEV2First - Part1       90  71 N/A (command specific)
 AuthenticateEV2First - Part2       90  AF
 AuthenticateEV2NonFirst - Part1    90  77 N/A (command specific)
@@ -59,6 +62,7 @@ public class Ntag424DnaMethods {
     private VersionInfo versionInfo;
     private boolean isTagNtag424Dna = false;
 
+    private boolean isApplicationSelected = false;
     private boolean printToLog = true; // print data to log
     private String logData;
     private byte[] errorCode = new byte[2];
@@ -70,8 +74,14 @@ public class Ntag424DnaMethods {
      */
 
     private static final byte GET_VERSION_INFO_COMMAND = (byte) 0x60;
-
     private static final byte GET_ADDITIONAL_FRAME_COMMAND = (byte) 0xAF;
+    private final byte SELECT_APPLICATION_ISO_COMMAND = (byte) 0xA4;
+
+    /**
+     * NTAG 424 DNA specific constants
+     */
+
+    private static final byte[] NTAG_424_DNA_DF_APPLICATION_NAME = Utils.hexStringToByteArray("D2760000850101");
 
 
     // Status codes
@@ -80,8 +90,9 @@ public class Ntag424DnaMethods {
     private static final byte AUTHENTICATION_ERROR = (byte) 0xAE;
     private static final byte ADDITIONAL_FRAME = (byte) 0xAF;
     // Response codes
-    private final byte[] RESPONSE_OK = new byte[]{(byte) 0x91, (byte) 0x00};
-    private final byte[] RESPONSE_FAILURE = new byte[]{(byte) 0x91, (byte) 0xFF}; // general, undefined failure
+    private static final byte[] RESPONSE_OK = new byte[]{(byte) 0x91, (byte) 0x00};
+    private static final byte[] RESPONSE_ISO_OK = new byte[]{(byte) 0x90, (byte) 0x00};
+    private static final byte[] RESPONSE_FAILURE = new byte[]{(byte) 0x91, (byte) 0xFF}; // general, undefined failure
 
     public Ntag424DnaMethods(TextView textView, Tag tag, Activity activity) {
         this.tag = tag;
@@ -95,6 +106,56 @@ public class Ntag424DnaMethods {
             errorCode = RESPONSE_FAILURE.clone();
         }
     }
+
+    public boolean selectNdefApplicationIso() {
+        return selectNdefApplicationIso(NTAG_424_DNA_DF_APPLICATION_NAME);
+    }
+
+    private boolean selectNdefApplicationIso(byte[] dfApplicationName) {
+        String logData = "";
+        final String methodName = "selectNdefApplicationIso";
+        log(methodName, "started", true);
+        log(methodName, Utils.printData("dfApplicationName", dfApplicationName));
+        if (!isTagNtag424Dna) {
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "discovered tag is not a NTAG424DNA tag, aborted";
+            return false;
+        }
+        if (isoDep == null) {
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "isoDep is NULL (maybe it is not a NTAG424DNA tag ?), aborted";
+            return false;
+        }
+        if (dfApplicationName == null) {
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "dfApplicationName is NULL, aborted";
+            return false;
+        }
+        // build command
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        baos.write((byte) 0x00);
+        baos.write(SELECT_APPLICATION_ISO_COMMAND);
+        baos.write((byte) 0x04); // select by DF name
+        baos.write((byte) 0x0C);
+        baos.write(dfApplicationName.length);
+        baos.write(dfApplicationName, 0, dfApplicationName.length);
+        baos.write((byte) 0x00); // le
+        byte[] apdu = baos.toByteArray();
+        byte[] response = sendData(apdu);
+        if (checkResponseIso(response)) {
+            log(methodName, methodName + " SUCCESS");
+            errorCode = RESPONSE_OK.clone();
+            errorCodeReason = methodName + " SUCCESS";
+            isApplicationSelected = true;
+            return true;
+        } else {
+            log(methodName, methodName + " FAILURE");
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = methodName + " FAILURE";
+            return false;
+        }
+    }
+
 
 
     /**
@@ -191,6 +252,22 @@ public class Ntag424DnaMethods {
             e.printStackTrace();
             return null;
         }
+    }
+
+    private boolean checkResponseIso(@NonNull byte[] data) {
+        // simple sanity check
+        if (data.length < 2) {
+            return false;
+        } // not ok
+        if (Arrays.equals(RESPONSE_ISO_OK, returnStatusBytes(data))) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    private byte[] returnStatusBytes(byte[] data) {
+        return Arrays.copyOfRange(data, (data.length - 2), data.length);
     }
 
     /**

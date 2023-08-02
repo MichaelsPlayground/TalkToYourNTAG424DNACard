@@ -7,4 +7,5 @@
     <color name="colorStatusBar">#1E88E5</color>
     <color name="light_background_green">#C0FFC0</color>
     <color name="light_background_red">#FFB5B5</color>
+    <color name="application_color_light_background_orange">#FFB74D</color>
 </resources>

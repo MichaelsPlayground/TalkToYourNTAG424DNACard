@@ -538,34 +538,18 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
             @Override
             public void onClick(View view) {
                 clearOutputFields();
-                String logString = "select an application";
+                String logString = "select a NDEF application ISO";
                 writeToUiAppend(output, logString);
-                byte[] applicationIdentifier = Utils.hexStringToByteArray(applicationId.getText().toString());
-                if (applicationIdentifier == null) {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you entered a wrong application ID", COLOR_RED);
-                    return;
-                }
-                //Utils.reverseByteArrayInPlace(applicationIdentifier); // change to LSB = change the order
-                if (applicationIdentifier.length != 3) {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you did not enter a 6 hex string application ID", COLOR_RED);
-                    return;
-                }
-                writeToUiAppend(output, logString + " with id: " + applicationId.getText().toString());
-                byte[] responseData = new byte[2];
-                boolean success = desfireAuthenticateLegacy.selectApplication(applicationIdentifier);
-                responseData = desfireAuthenticateLegacy.getErrorCode();
+
+                boolean success = ntag424DnaMethods.selectNdefApplicationIso();
                 if (success) {
-                    // manually copy the aid
-                    selectedApplicationId = applicationIdentifier.clone();
-                    applicationSelected.setText(bytesToHexNpeUpperCase(selectedApplicationId));
                     writeToUiAppend(output, logString + " SUCCESS");
                     writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
                     vibrateShort();
                 } else {
-                    writeToUiAppend(output, logString + " FAILURE with error " + EV3.getErrorCode(responseData));
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
+                    writeToUiAppend(output, logString + " FAILURE");
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE", COLOR_RED);
                 }
-
             }
         });
 
