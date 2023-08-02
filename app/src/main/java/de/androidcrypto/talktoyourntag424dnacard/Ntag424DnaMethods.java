@@ -22,6 +22,8 @@ import java.util.Arrays;
 This is the complete command set per NTAG 424 DNA NT4H2421Gx.pdf datasheet
                                                                  Impl.
 Instruction                       CLA INS Communication mode     Status
+
+IsoSelectApplication               00  A4 CommMode.Plain         implemented
 AuthenticateEV2First - Part1       90  71 N/A (command specific)
 AuthenticateEV2First - Part2       90  AF
 AuthenticateEV2NonFirst - Part1    90  77 N/A (command specific)
@@ -36,9 +38,9 @@ GetCardUID                         90  51 CommMode.Full
 GetFileCounters                    90  F6
 GetFileSettings                    90  F5
 GetKeyVersion                      90  64
-GetVersion - Part1                 90  60
-GetVersion - Part2                 90  AF
-GetVersion - Part3                 90  AF
+GetVersion - Part1                 90  60 CommMode.Plain         implemented
+GetVersion - Part2                 90  AF CommMode.Plain         implemented
+GetVersion - Part3                 90  AF CommMode.Plain         implemented
 ISOReadBinary                      00  B0
 ReadData                           90  AD
 Read_Sig                           90  3C
@@ -75,7 +77,8 @@ public class Ntag424DnaMethods {
 
     private static final byte GET_VERSION_INFO_COMMAND = (byte) 0x60;
     private static final byte GET_ADDITIONAL_FRAME_COMMAND = (byte) 0xAF;
-    private final byte SELECT_APPLICATION_ISO_COMMAND = (byte) 0xA4;
+    private static final byte SELECT_APPLICATION_ISO_COMMAND = (byte) 0xA4;
+    private static final byte GET_FILE_SETTINGS_COMMAND = (byte) 0xF5;
 
     /**
      * NTAG 424 DNA specific constants
@@ -143,6 +146,48 @@ public class Ntag424DnaMethods {
         byte[] apdu = baos.toByteArray();
         byte[] response = sendData(apdu);
         if (checkResponseIso(response)) {
+            log(methodName, methodName + " SUCCESS");
+            errorCode = RESPONSE_OK.clone();
+            errorCodeReason = methodName + " SUCCESS";
+            isApplicationSelected = true;
+            return true;
+        } else {
+            log(methodName, methodName + " FAILURE");
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = methodName + " FAILURE";
+            return false;
+        }
+    }
+
+    private boolean getFileSettings(byte fileNumber) {
+        String logData = "";
+        final String methodName = "getFileSettings";
+        log(methodName, "started", true);
+        log(methodName, "fileNumber: " + (int) fileNumber);
+        if (!isTagNtag424Dna) {
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "discovered tag is not a NTAG424DNA tag, aborted";
+            return false;
+        }
+        if (isoDep == null) {
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "isoDep is NULL (maybe it is not a NTAG424DNA tag ?), aborted";
+            return false;
+        }
+        if ((fileNumber < (byte) 0x01) || (fileNumber > (byte) 0x03)) {
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "fileNumber not in range 1..3, aborted";
+            return false;
+        }
+        byte[] apdu = new byte[0];
+        byte[] response;
+        try {
+            apdu = wrapMessage(GET_FILE_SETTINGS_COMMAND, new byte[]{fileNumber});
+            response = sendData(apdu);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        if (checkResponse(response)) {
             log(methodName, methodName + " SUCCESS");
             errorCode = RESPONSE_OK.clone();
             errorCodeReason = methodName + " SUCCESS";
@@ -251,6 +296,26 @@ public class Ntag424DnaMethods {
             Log.e(TAG, e.getMessage());
             e.printStackTrace();
             return null;
+        }
+    }
+
+    /**
+     * checks if the response has an 0x'9100' at the end means success
+     * and the method returns the data without 0x'9100' at the end
+     * if any other trailing bytes show up the method returns false
+     *
+     * @param data
+     * @return
+     */
+    private boolean checkResponse(@NonNull byte[] data) {
+        // simple sanity check
+        if (data.length < 2) {
+            return false;
+        } // not ok
+        if (Arrays.equals(RESPONSE_OK, returnStatusBytes(data))) {
+            return true;
+        } else {
+            return false;
         }
     }
 
