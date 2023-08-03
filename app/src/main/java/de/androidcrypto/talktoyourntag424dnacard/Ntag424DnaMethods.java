@@ -31,18 +31,19 @@ This is the complete command set per NTAG 424 DNA NT4H2421Gx.pdf datasheet
 Instruction                       CLA INS Communication mode     Status
 
 IsoSelectApplication               00  A4 CommMode.Plain         implemented
-AuthenticateEV2First - Part1       90  71 N/A (command specific)
-AuthenticateEV2First - Part2       90  AF
-AuthenticateEV2NonFirst - Part1    90  77 N/A (command specific)
-AuthenticateEV2NonFirst - Part2    90  AF
-AuthenticateLRPFirst - Part1       90  71 N/A (command specific)
-AuthenticateLRPFirst - Part2       90  AF
-AuthenticateLRPNonFirst - Part1    90  77 N/A (command specific)
-AuthenticateLRPNonFirst - Part2    90  AF
+AuthenticateEV2First - Part1       90  71 N/A (command specific) implemented
+AuthenticateEV2First - Part2       90  AF                        implemented
+AuthenticateEV2NonFirst - Part1    90  77 N/A (command specific) implemented
+AuthenticateEV2NonFirst - Part2    90  AF                        implemented
+AuthenticateLRPFirst - Part1       90  71 N/A (command specific) n/a yet
+AuthenticateLRPFirst - Part2       90  AF                        n/a yet
+AuthenticateLRPNonFirst - Part1    90  77 N/A (command specific) n/a yet
+AuthenticateLRPNonFirst - Part2    90  AF                        n/a yet
 ChangeFileSettings                 90  5F CommMode.Full
 ChangeKey                          90  C4 CommMode.Full
 GetCardUID                         90  51 CommMode.Full
 GetFileCounters                    90  F6 CommMode.Full
+GetFileSettings                    90  F5 CommMode.Plain         implemented
 GetFileSettings                    90  F5 CommMode.MAC
 GetKeyVersion                      90  64 CommMode.MAC
 GetVersion - Part1                 90  60 CommMode.Plain         implemented
