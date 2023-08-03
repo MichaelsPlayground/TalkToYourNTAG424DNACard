@@ -1323,7 +1323,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 vibrateShort();
             }
         });
-        
+
         /**
          * section for value files
          */
@@ -1920,7 +1920,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 byte SET_CONFIGURATION_COMMAND = (byte) 0x03;
                 //byte[] parameterEnabling = new byte[]{(byte) 0x04};
                 //byte[] parameterEnabling = new byte[]{(byte) 0x01};
-                byte[] parameterEnabling = new byte[]{(byte) 0x01,(byte) 0x01};
+                byte[] parameterEnabling = new byte[]{(byte) 0x01, (byte) 0x01};
                 //byte[] parameter = new byte[]{(byte) 0x55};
                 byte[] parameter = new byte[]{(byte) 0x55, (byte) 0x01};
                 byte[] responseData = new byte[2];
@@ -2060,33 +2060,26 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
             @Override
             public void onClick(View view) {
                 clearOutputFields();
-                String logString = "read from a standard file";
+                String logString = "read from all standard files";
                 writeToUiAppend(output, logString);
-                // check that a file was selected before
-                if (TextUtils.isEmpty(selectedFileId)) {
-                    writeToUiAppend(output, "You need to select a file first, aborted");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE", COLOR_RED);
+
+                // check that an application was selected before
+                if (selectedApplicationId == null) {
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
                     return;
                 }
-                byte fileIdByte = Byte.parseByte(selectedFileId);
-                byte[] responseData = new byte[2];
-                byte[] result = readFromAStandardFilePlainCommunicationDes(output, fileIdByte, selectedFileSize, responseData);
-                if (result == null) {
-                    // something gone wrong
-                    writeToUiAppend(output, logString + " FAILURE with error " + EV3.getErrorCode(responseData));
-                    if (checkResponseMoreData(responseData)) {
-                        writeToUiAppend(output, "the file is too long to read, sorry");
-                    }
-                    if (checkAuthenticationError(responseData)) {
-                        writeToUiAppend(output, "as we received an Authentication Error - did you forget to AUTHENTICATE with a READ ACCESS KEY ?");
-                    }
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
+
+                List<byte[]> fileContents = ntag424DnaMethods.getReadAllFileContents();
+                if ((fileContents == null) || (fileContents.size() < 1)) {
+                    writeToUiAppend(output, logString + " FAILURE");
                     return;
                 } else {
-                    writeToUiAppend(output, logString + " ID: " + fileIdByte + printData(" data", result));
-                    writeToUiAppend(output, logString + " ID: " + fileIdByte + " data: " + new String(result, StandardCharsets.UTF_8));
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    vibrateShort();
+                    for (int i = 0; i < fileContents.size(); i++) {
+                        writeToUiAppend(output, "fileNumber: " + i + "\n" +
+                                Utils.printData("fileContent", fileContents.get(i)));
+                        writeToUiAppend(output, outputDivider);
+                        vibrateShort();
+                    }
                 }
             }
         });
@@ -2975,7 +2968,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
 
                 String hardwareTypeName = " is not a Mifare DESFire tag";
                 if (hardwareType == (byte) 0x01) hardwareTypeName = " is a Mifare DESFire tag";
-                int hardwareStorageSizeInt = (int)Math.pow (2, hardwareStorageSize >> 1); // get the storage size in bytes
+                int hardwareStorageSizeInt = (int) Math.pow(2, hardwareStorageSize >> 1); // get the storage size in bytes
 
                 writeToUiAppend(output, "hardwareType: " + Utils.byteToHex(hardwareType) + hardwareTypeName);
                 writeToUiAppend(output, "hardwareStorageSize (byte): " + Utils.byteToHex(hardwareStorageSize));
@@ -3222,7 +3215,6 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
          */
             }
         });
-
 
 
         /**
@@ -3497,7 +3489,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                     return;
                 }
 
-               // before we are running an auth with key 0 (application master key)
+                // before we are running an auth with key 0 (application master key)
                 writeToUiAppend(output, "step 2: authenticate with the app MASTER key");
                 success = desfireAuthenticateLegacy.authenticateD40(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_DES_DEFAULT);
                 //boolean success = desfireAuthenticateLegacy.authenticateD40(APPLICATION_KEY_CAR_NUMBER, APPLICATION_KEY_CAR_DES_DEFAULT);
@@ -3859,6 +3851,11 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 String logString = "getKeyVersion";
                 writeToUiAppend(output, logString);
 
+                if (selectedApplicationId == null) {
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
+                    return;
+                }
+
                 byte[] responseData = new byte[2];
                 List<Byte> result = ntag424DnaMethods.getAllKeyVersions();
                 if (result.isEmpty()) {
@@ -3868,7 +3865,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                     writeToUiAppend(output, logString + " SUCCESS");
                     writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
                     for (int i = 0; i < result.size(); i++) {
-                        writeToUiAppend(output,"keyNumber " + i + " keyVersion: " + result.get(i).toString());
+                        writeToUiAppend(output, "keyNumber " + i + " keyVersion: " + result.get(i).toString());
                     }
                     vibrateShort();
                 }
@@ -4088,7 +4085,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 // response from 0040EEEE000100D1FE001F00004400004400002000006A0000
 
                 byte[] fileSettingsStandardResponse = Utils.hexStringToByteArray("0003301F000100"); // Standard file: FileType || FileOption || AccessRights || FileSize
-                byte[] fileSettingsSdmResponse =    Utils.hexStringToByteArray("004000E0000100C1F121200000430000430000");
+                byte[] fileSettingsSdmResponse = Utils.hexStringToByteArray("004000E0000100C1F121200000430000430000");
                 //byte[] fileSettingsSdm424Response = Utils.hexStringToByteArray("0040EEEE000100D1FE001F00004400004400002000006A0000");
                 byte[] fileSettingsSdm424Response = Utils.hexStringToByteArray("004000E0000100F12121200000430000430000");
 /*
@@ -4254,7 +4251,7 @@ C1h =
                 byte[] uid = new byte[0];
                 byte[] readCtr = new byte[0];
                 if (decryptedNdefData != null) {
-                    writeToUiAppend(output, logString +  printData(" decryptedNdefData", decryptedNdefData));
+                    writeToUiAppend(output, logString + printData(" decryptedNdefData", decryptedNdefData));
                     // split encrypted PICC data from NDEF / SDM
                     byte piccDataTag = decryptedNdefData[0];
                     uid = Arrays.copyOfRange(decryptedNdefData, 1, 8);
@@ -4903,7 +4900,6 @@ C1h =
     /**
      * section for key handling
      */
-
 
 
     /**

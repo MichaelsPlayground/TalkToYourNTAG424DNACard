@@ -1040,6 +1040,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
                         android:text="read" />
 
@@ -1576,6 +1577,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
                         android:text="get key version" />
 
@@ -1584,7 +1586,6 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
                         android:text="key settings" />
 

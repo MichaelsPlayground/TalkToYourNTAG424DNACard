@@ -1,5 +1,8 @@
 package de.androidcrypto.talktoyourntag424dnacard;
 
+import static de.androidcrypto.talktoyourntag424dnacard.Utils.hexStringToByteArray;
+import static de.androidcrypto.talktoyourntag424dnacard.Utils.printData;
+
 import android.app.Activity;
 import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
@@ -114,6 +117,9 @@ public class Ntag424DnaMethods {
     private static final byte GET_ADDITIONAL_FRAME_COMMAND = (byte) 0xAF;
     private static final byte SELECT_APPLICATION_ISO_COMMAND = (byte) 0xA4;
     private static final byte GET_FILE_SETTINGS_COMMAND = (byte) 0xF5;
+    private static final byte READ_STANDARD_FILE_COMMAND = (byte) 0xBD;
+    private static final byte READ_STANDARD_FILE_SECURE_COMMAND = (byte) 0xAD;
+
     private static final byte AUTHENTICATE_EV2_FIRST_COMMAND = (byte) 0x71;
     private static final byte AUTHENTICATE_EV2_NON_FIRST_COMMAND = (byte) 0x77;
 
@@ -197,7 +203,7 @@ public class Ntag424DnaMethods {
         String logData = "";
         final String methodName = "selectNdefApplicationIso";
         log(methodName, "started", true);
-        log(methodName, Utils.printData("dfApplicationName", dfApplicationName));
+        log(methodName, printData("dfApplicationName", dfApplicationName));
         if (!isTagNtag424Dna) {
             errorCode = RESPONSE_FAILURE.clone();
             errorCodeReason = "discovered tag is not a NTAG424DNA tag, aborted";
@@ -340,7 +346,7 @@ public class Ntag424DnaMethods {
         logData = "";
         invalidateAllData();
         final String methodName = "authenticateAesEv2First";
-        log(methodName, "keyNo: " + keyNo + Utils.printData(" key", key), true);
+        log(methodName, "keyNo: " + keyNo + printData(" key", key), true);
         errorCode = new byte[2];
         // sanity checks
         if (keyNo < 0) {
@@ -377,12 +383,12 @@ public class Ntag424DnaMethods {
             byte[] parameter = new byte[2];
             parameter[0] = keyNo;
             parameter[1] = (byte) 0x00; // is already 0x00
-            log(methodName, Utils.printData("parameter", parameter));
+            log(methodName, printData("parameter", parameter));
             apdu = wrapMessage(AUTHENTICATE_EV2_FIRST_COMMAND, parameter);
-            log(methodName, "get enc rndB " + Utils.printData("apdu", apdu));
+            log(methodName, "get enc rndB " + printData("apdu", apdu));
             //response = isoDep.transceive(apdu);
             response = sendData(apdu);
-            log(methodName, "get enc rndB " + Utils.printData("response", response));
+            log(methodName, "get enc rndB " + printData("response", response));
         } catch (IOException e) {
             Log.e(TAG, methodName + " transceive failed, IOException:\n" + e.getMessage());
             log(methodName, "IOException: " + e.getMessage());
@@ -393,55 +399,55 @@ public class Ntag424DnaMethods {
         System.arraycopy(responseBytes, 0, errorCode, 0, 2);
         // we are expecting that the status code is 0xAF means more data need to get exchanged
         if (!checkResponseMoreData(responseBytes)) {
-            log(methodName, "expected to get get 0xAF as error code but  found: " + Utils.printData("errorCode", responseBytes) + ", aborted");
+            log(methodName, "expected to get get 0xAF as error code but  found: " + printData("errorCode", responseBytes) + ", aborted");
             System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
             return false;
         }
         // now we know that we can work with the response, 16 bytes long
         // R-APDU (Part 1) (E(Kx, RndB)) || SW1 || SW2
         byte[] rndB_enc = getData(response);
-        log(methodName, Utils.printData("encryptedRndB", rndB_enc));
+        log(methodName, printData("encryptedRndB", rndB_enc));
 
         // start the decryption
         //byte[] iv0 = new byte[8];
         byte[] iv0 = new byte[16];
-        log(methodName, "step 02 iv0 is 16 zero bytes " + Utils.printData("iv0", iv0));
-        log(methodName, "step 03 decrypt the encryptedRndB using AES.decrypt with key " + Utils.printData("key", key) + Utils.printData(" iv0", iv0));
+        log(methodName, "step 02 iv0 is 16 zero bytes " + printData("iv0", iv0));
+        log(methodName, "step 03 decrypt the encryptedRndB using AES.decrypt with key " + printData("key", key) + printData(" iv0", iv0));
         byte[] rndB = AES.decrypt(iv0, key, rndB_enc);
-        log(methodName, Utils.printData("rndB", rndB));
+        log(methodName, printData("rndB", rndB));
 
         log(methodName, "step 04 rotate rndB to LEFT");
         byte[] rndB_leftRotated = rotateLeft(rndB);
-        log(methodName, Utils.printData("rndB_leftRotated", rndB_leftRotated));
+        log(methodName, printData("rndB_leftRotated", rndB_leftRotated));
 
         // authenticate 2nd part
         log(methodName, "step 05 generate a random rndA");
         byte[] rndA = new byte[16]; // this is an AES key
         rndA = getRandomData(rndA);
-        log(methodName, Utils.printData("rndA", rndA));
+        log(methodName, printData("rndA", rndA));
 
         log(methodName, "step 06 concatenate rndA | rndB_leftRotated");
         byte[] rndArndB_leftRotated = concatenate(rndA, rndB_leftRotated);
-        log(methodName, Utils.printData("rndArndB_leftRotated", rndArndB_leftRotated));
+        log(methodName, printData("rndArndB_leftRotated", rndArndB_leftRotated));
 
         // IV is now encrypted RndB received from the tag
         log(methodName, "step 07 iv1 is 16 zero bytes");
         byte[] iv1 = new byte[16];
-        log(methodName, Utils.printData("iv1", iv1));
+        log(methodName, printData("iv1", iv1));
 
         // Encrypt RndAB_rot
         log(methodName, "step 08 encrypt rndArndB_leftRotated using AES.encrypt and iv1");
         byte[] rndArndB_leftRotated_enc = AES.encrypt(iv1, key, rndArndB_leftRotated);
-        log(methodName, Utils.printData("rndArndB_leftRotated_enc", rndArndB_leftRotated_enc));
+        log(methodName, printData("rndArndB_leftRotated_enc", rndArndB_leftRotated_enc));
 
         // send encrypted data to PICC
         log(methodName, "step 09 send the encrypted data to the PICC");
         try {
             apdu = wrapMessage(GET_ADDITIONAL_FRAME_COMMAND, rndArndB_leftRotated_enc);
-            log(methodName, "send rndArndB_leftRotated_enc " + Utils.printData("apdu", apdu));
+            log(methodName, "send rndArndB_leftRotated_enc " + printData("apdu", apdu));
             //response = isoDep.transceive(apdu);
             response = sendData(apdu);
-            log(methodName, "send rndArndB_leftRotated_enc " + Utils.printData("response", response));
+            log(methodName, "send rndArndB_leftRotated_enc " + printData("response", response));
         } catch (IOException e) {
             Log.e(TAG, methodName + " transceive failed, IOException:\n" + e.getMessage());
             log(methodName, "IOException: " + e.getMessage());
@@ -452,7 +458,7 @@ public class Ntag424DnaMethods {
         System.arraycopy(responseBytes, 0, errorCode, 0, 2);
         // we are expecting that the status code is 0x00 means the exchange was OK
         if (!checkResponse(responseBytes)) {
-            log(methodName, "expected to get get 0x00 as error code but  found: " + Utils.printData("errorCode", responseBytes) + ", aborted");
+            log(methodName, "expected to get get 0x00 as error code but  found: " + printData("errorCode", responseBytes) + ", aborted");
             System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
             return false;
         }
@@ -460,17 +466,17 @@ public class Ntag424DnaMethods {
         // R-APDU (Part 2) E(Kx, TI || RndA' || PDcap2 || PCDcap2) || Response Code
         log(methodName, "step 10 received encrypted data from PICC");
         byte[] data_enc = getData(response);
-        log(methodName, Utils.printData("data_enc", data_enc));
+        log(methodName, printData("data_enc", data_enc));
 
         //IV is now reset to zero bytes
         log(methodName, "step 11 iv2 is 16 zero bytes");
         byte[] iv2 = new byte[16];
-        log(methodName, Utils.printData("iv2", iv2));
+        log(methodName, printData("iv2", iv2));
 
         // Decrypt encrypted data
         log(methodName, "step 12 decrypt data_enc with iv2 and key");
         byte[] data = AES.decrypt(iv2, key, data_enc);
-        log(methodName, Utils.printData("data", data));
+        log(methodName, printData("data", data));
         if (data == null) {
             Log.e(TAG, "data is NULL, aborted");
             log(methodName, "data is NULL, aborted");
@@ -497,29 +503,29 @@ public class Ntag424DnaMethods {
         System.arraycopy(data, 20, pDcap2, 0, 6);
         System.arraycopy(data, 26, pCDcap2, 0, 6);
         log(methodName, "step 13 full data needs to get split up in 4 values");
-        log(methodName, Utils.printData("data", data));
-        log(methodName, Utils.printData("ti", ti));
-        log(methodName, Utils.printData("rndA_leftRotated", rndA_leftRotated));
-        log(methodName, Utils.printData("pDcap2", pDcap2));
-        log(methodName, Utils.printData("pCDcap2", pCDcap2));
+        log(methodName, printData("data", data));
+        log(methodName, printData("ti", ti));
+        log(methodName, printData("rndA_leftRotated", rndA_leftRotated));
+        log(methodName, printData("pDcap2", pDcap2));
+        log(methodName, printData("pCDcap2", pCDcap2));
 
         // PCD compares send and received RndA
         log(methodName, "step 14 rotate rndA_leftRotated to RIGHT");
         byte[] rndA_received = rotateRight(rndA_leftRotated);
-        log(methodName, Utils.printData("rndA_received ", rndA_received));
+        log(methodName, printData("rndA_received ", rndA_received));
         boolean rndAEqual = Arrays.equals(rndA, rndA_received);
         //log(methodName, printData("rndA received ", rndA_received));
-        log(methodName, Utils.printData("rndA          ", rndA));
+        log(methodName, printData("rndA          ", rndA));
         log(methodName, "rndA and rndA received are equal: " + rndAEqual);
-        log(methodName, Utils.printData("rndB          ", rndB));
+        log(methodName, printData("rndB          ", rndB));
 
         log(methodName, "**** auth result ****");
         if (rndAEqual) {
             log(methodName, "*** AUTHENTICATED ***");
             SesAuthENCKey = getSesAuthEncKey(rndA, rndB, key);
             SesAuthMACKey = getSesAuthMacKey(rndA, rndB, key);
-            log(methodName, Utils.printData("SesAuthENCKey ", SesAuthENCKey));
-            log(methodName, Utils.printData("SesAuthMACKey ", SesAuthMACKey));
+            log(methodName, printData("SesAuthENCKey ", SesAuthENCKey));
+            log(methodName, printData("SesAuthMACKey ", SesAuthMACKey));
             CmdCounter = 0;
             TransactionIdentifier = ti.clone();
             authenticateEv2FirstSuccess = true;
@@ -568,7 +574,7 @@ public class Ntag424DnaMethods {
         logData = "";
         invalidateAllDataNonFirst();
         final String methodName = "authenticateAesEv2NonFirst";
-        log(methodName, Utils.printData("key", key) + " keyNo: " + keyNo, true);
+        log(methodName, printData("key", key) + " keyNo: " + keyNo, true);
         errorCode = new byte[2];
         // sanity checks
         if (!authenticateEv2FirstSuccess) {
@@ -609,11 +615,11 @@ public class Ntag424DnaMethods {
              */
             byte[] parameter = new byte[1];
             parameter[0] = keyNo;
-            log(methodName, Utils.printData("parameter", parameter));
+            log(methodName, printData("parameter", parameter));
             apdu = wrapMessage(AUTHENTICATE_EV2_NON_FIRST_COMMAND, parameter);
-            log(methodName, "get enc rndB " + Utils.printData("apdu", apdu));
+            log(methodName, "get enc rndB " + printData("apdu", apdu));
             response = isoDep.transceive(apdu);
-            log(methodName, "get enc rndB " + Utils.printData("response", response));
+            log(methodName, "get enc rndB " + printData("response", response));
         } catch (IOException e) {
             Log.e(TAG, methodName + " transceive failed, IOException:\n" + e.getMessage());
             log(methodName, "IOException: " + e.getMessage());
@@ -624,54 +630,54 @@ public class Ntag424DnaMethods {
         System.arraycopy(responseBytes, 0, errorCode, 0, 2);
         // we are expecting that the status code is 0xAF means more data need to get exchanged
         if (!checkResponseMoreData(responseBytes)) {
-            log(methodName, "expected to get get 0xAF as error code but  found: " + Utils.printData("errorCode", responseBytes) + ", aborted");
+            log(methodName, "expected to get get 0xAF as error code but  found: " + printData("errorCode", responseBytes) + ", aborted");
             System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
             return false;
         }
         // now we know that we can work with the response, 16 bytes long
         // R-APDU (Part 1) (E(Kx, RndB)) || SW1 || SW2
         byte[] rndB_enc = getData(response);
-        log(methodName, Utils.printData("encryptedRndB", rndB_enc));
+        log(methodName, printData("encryptedRndB", rndB_enc));
 
         // start the decryption
         //byte[] iv0 = new byte[8];
         byte[] iv0 = new byte[16];
-        log(methodName, "step 02 iv0 is 16 zero bytes " + Utils.printData("iv0", iv0));
-        log(methodName, "step 03 decrypt the encryptedRndB using AES.decrypt with key " + Utils.printData("key", key) + Utils.printData(" iv0", iv0));
+        log(methodName, "step 02 iv0 is 16 zero bytes " + printData("iv0", iv0));
+        log(methodName, "step 03 decrypt the encryptedRndB using AES.decrypt with key " + printData("key", key) + printData(" iv0", iv0));
         byte[] rndB = AES.decrypt(iv0, key, rndB_enc);
-        log(methodName, Utils.printData("rndB", rndB));
+        log(methodName, printData("rndB", rndB));
 
         log(methodName, "step 04 rotate rndB to LEFT");
         byte[] rndB_leftRotated = rotateLeft(rndB);
-        log(methodName, Utils.printData("rndB_leftRotated", rndB_leftRotated));
+        log(methodName, printData("rndB_leftRotated", rndB_leftRotated));
 
         // authenticate 2nd part
         log(methodName, "step 05 generate a random rndA");
         byte[] rndA = new byte[16]; // this is an AES key
         rndA = getRandomData(rndA);
-        log(methodName, Utils.printData("rndA", rndA));
+        log(methodName, printData("rndA", rndA));
 
         log(methodName, "step 06 concatenate rndA | rndB_leftRotated");
         byte[] rndArndB_leftRotated = concatenate(rndA, rndB_leftRotated);
-        log(methodName, Utils.printData("rndArndB_leftRotated", rndArndB_leftRotated));
+        log(methodName, printData("rndArndB_leftRotated", rndArndB_leftRotated));
 
         // IV is now encrypted RndB received from the tag
         log(methodName, "step 07 iv1 is 16 zero bytes");
         byte[] iv1 = new byte[16];
-        log(methodName, Utils.printData("iv1", iv1));
+        log(methodName, printData("iv1", iv1));
 
         // Encrypt RndAB_rot
         log(methodName, "step 08 encrypt rndArndB_leftRotated using AES.encrypt and iv1");
         byte[] rndArndB_leftRotated_enc = AES.encrypt(iv1, key, rndArndB_leftRotated);
-        log(methodName, Utils.printData("rndArndB_leftRotated_enc", rndArndB_leftRotated_enc));
+        log(methodName, printData("rndArndB_leftRotated_enc", rndArndB_leftRotated_enc));
 
         // send encrypted data to PICC
         log(methodName, "step 09 send the encrypted data to the PICC");
         try {
             apdu = wrapMessage(GET_ADDITIONAL_FRAME_COMMAND, rndArndB_leftRotated_enc);
-            log(methodName, "send rndArndB_leftRotated_enc " + Utils.printData("apdu", apdu));
+            log(methodName, "send rndArndB_leftRotated_enc " + printData("apdu", apdu));
             response = isoDep.transceive(apdu);
-            log(methodName, "send rndArndB_leftRotated_enc " + Utils.printData("response", response));
+            log(methodName, "send rndArndB_leftRotated_enc " + printData("response", response));
         } catch (IOException e) {
             Log.e(TAG, methodName + " transceive failed, IOException:\n" + e.getMessage());
             log(methodName, "IOException: " + e.getMessage());
@@ -682,7 +688,7 @@ public class Ntag424DnaMethods {
         System.arraycopy(responseBytes, 0, errorCode, 0, 2);
         // we are expecting that the status code is 0x00 means the exchange was OK
         if (!checkResponse(responseBytes)) {
-            log(methodName, "expected to get get 0x00 as error code but  found: " + Utils.printData("errorCode", responseBytes) + ", aborted");
+            log(methodName, "expected to get get 0x00 as error code but  found: " + printData("errorCode", responseBytes) + ", aborted");
             //System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
             return false;
         }
@@ -690,17 +696,17 @@ public class Ntag424DnaMethods {
         // R-APDU (Part 2) E(Kx, RndA' || Response Code
         log(methodName, "step 10 received encrypted data from PICC");
         byte[] data_enc = getData(response);
-        log(methodName, Utils.printData("data_enc", data_enc));
+        log(methodName, printData("data_enc", data_enc));
 
         //IV is now reset to zero bytes
         log(methodName, "step 11 iv2 is 16 zero bytes");
         byte[] iv2 = new byte[16];
-        log(methodName, Utils.printData("iv2", iv2));
+        log(methodName, printData("iv2", iv2));
 
         // Decrypt encrypted data
         log(methodName, "step 12 decrypt data_enc with iv2 and key");
         byte[] data = AES.decrypt(iv2, key, data_enc);
-        log(methodName, Utils.printData("data", data));
+        log(methodName, printData("data", data));
         // data is 32 bytes long, e.g. a1487b61f69cef65a09742b481152325a7cb8fc6000000000000000000000000
         /**
          * structure of data
@@ -712,25 +718,25 @@ public class Ntag424DnaMethods {
         // split data not necessary, data is rndA_leftRotated
         byte[] rndA_leftRotated = data.clone();
         log(methodName, "step 13 full data is rndA_leftRotated only");
-        log(methodName, Utils.printData("rndA_leftRotated", rndA_leftRotated));
+        log(methodName, printData("rndA_leftRotated", rndA_leftRotated));
 
         // PCD compares send and received RndA
         log(methodName, "step 14 rotate rndA_leftRotated to RIGHT");
         byte[] rndA_received = rotateRight(rndA_leftRotated);
-        log(methodName, Utils.printData("rndA_received ", rndA_received));
+        log(methodName, printData("rndA_received ", rndA_received));
         boolean rndAEqual = Arrays.equals(rndA, rndA_received);
 
         //log(methodName, printData("rndA received ", rndA_received));
-        log(methodName, Utils.printData("rndA          ", rndA));
+        log(methodName, printData("rndA          ", rndA));
         log(methodName, "rndA and rndA received are equal: " + rndAEqual);
-        log(methodName, Utils.printData("rndB          ", rndB));
+        log(methodName, printData("rndB          ", rndB));
         log(methodName, "**** auth result ****");
         if (rndAEqual) {
             log(methodName, "*** AUTHENTICATED ***");
             SesAuthENCKey = getSesAuthEncKey(rndA, rndB, key);
             SesAuthMACKey = getSesAuthMacKey(rndA, rndB, key);
-            log(methodName, Utils.printData("SesAuthENCKey ", SesAuthENCKey));
-            log(methodName, Utils.printData("SesAuthMACKey ", SesAuthMACKey));
+            log(methodName, printData("SesAuthENCKey ", SesAuthENCKey));
+            log(methodName, printData("SesAuthMACKey ", SesAuthMACKey));
             //CmdCounter = 0; // is not resetted in EV2NonFirst
             //TransactionIdentifier = ti.clone(); // is not resetted in EV2NonFirst
             authenticateEv2NonFirstSuccess = true;
@@ -741,6 +747,167 @@ public class Ntag424DnaMethods {
         }
         log(methodName, "*********************");
         return rndAEqual;
+    }
+
+    public List<byte[]> getReadAllFileContents() {
+        List<byte[]> contentList = new ArrayList<>();
+        byte[] content = readStandardFileFull(STANDARD_FILE_NUMBER_01_CC, 0, 32);
+        contentList.add(content);
+        content  = readStandardFileFull(STANDARD_FILE_NUMBER_02, 0, 256);
+        contentList.add(content);
+        content  = readStandardFileFull(STANDARD_FILE_NUMBER_03, 0, 128);
+        contentList.add(content);
+        return contentList;
+    }
+
+    public byte[] readStandardFile(byte fileNumber) {
+
+
+        return null;
+    }
+
+    public byte[] readStandardFileFull(byte fileNumber, int offset, int length) {
+        // see Mifare DESFire Light Features and Hints AN12343.pdf pages 55 - 58
+        // Cmd.ReadData in AES Secure Messaging using CommMode.Full
+        // this is based on the read of a data file on a DESFire Light card
+
+        // status
+
+        String logData = "";
+        final String methodName = "readStandardFileFull";
+        log(methodName, "started", true);
+        log(methodName, "fileNumber: " + fileNumber + " offset: " + offset + " length: " + length);
+        // sanity checks
+        if ((!authenticateEv2FirstSuccess) & (!authenticateEv2NonFirstSuccess)) {
+            Log.d(TAG, "missing successful authentication with EV2First or EV2NonFirst, aborted");
+            System.arraycopy(RESPONSE_FAILURE_MISSING_AUTHENTICATION, 0, errorCode, 0, 2);
+            return null;
+        }
+        if ((isoDep == null) || (!isoDep.isConnected())) {
+            Log.e(TAG, methodName + " lost connection to the card, aborted");
+            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            return null;
+        }
+
+        byte[] offsetBytes = Utils.intTo3ByteArrayInversed(offset); // LSB order
+        byte[] lengthBytes = Utils.intTo3ByteArrayInversed(length); // LSB order
+        ByteArrayOutputStream baosCmdHeader = new ByteArrayOutputStream();
+        baosCmdHeader.write(fileNumber);
+        baosCmdHeader.write(offsetBytes, 0, 3);
+        baosCmdHeader.write(lengthBytes, 0, 3);
+        byte[] cmdHeader = baosCmdHeader.toByteArray();
+        log(methodName, printData("cmdHeader", cmdHeader));
+        // example: 00000000300000
+        // MAC_Input
+        byte[] commandCounterLsb1 = Utils.intTo2ByteArrayInversed(CmdCounter);
+        log(methodName, "CmdCounter: " + CmdCounter);
+        log(methodName, printData("commandCounterLsb1", commandCounterLsb1));
+        ByteArrayOutputStream baosMacInput = new ByteArrayOutputStream();
+        baosMacInput.write(READ_STANDARD_FILE_SECURE_COMMAND); // 0xAD
+        baosMacInput.write(commandCounterLsb1, 0, commandCounterLsb1.length);
+        baosMacInput.write(TransactionIdentifier, 0, TransactionIdentifier.length);
+        baosMacInput.write(cmdHeader, 0, cmdHeader.length);
+        byte[] macInput = baosMacInput.toByteArray();
+        log(methodName, printData("macInput", macInput));
+        // example: AD0100CD73D8E500000000300000
+        // generate the MAC (CMAC) with the SesAuthMACKey
+        log(methodName, printData("SesAuthMACKey", SesAuthMACKey));
+        byte[] macFull = calculateDiverseKey(SesAuthMACKey, macInput);
+        log(methodName, printData("macFull", macFull));
+        // now truncate the MAC
+        byte[] macTruncated = truncateMAC(macFull);
+        log(methodName, printData("macTruncated", macTruncated));
+        // example: 7CF94F122B3DB05F
+
+        // Constructing the full ReadData Command APDU
+        ByteArrayOutputStream baosReadDataCommand = new ByteArrayOutputStream();
+        baosReadDataCommand.write(cmdHeader, 0, cmdHeader.length);
+        baosReadDataCommand.write(macTruncated, 0, macTruncated.length);
+        byte[] readDataCommand = baosReadDataCommand.toByteArray();
+        log(methodName, printData("readDataCommand", readDataCommand));
+        byte[] response = new byte[0];
+        byte[] apdu = new byte[0];
+        byte[] fullEncryptedData;
+        byte[] encryptedData;
+        byte[] responseMACTruncatedReceived;
+        try {
+            apdu = wrapMessage(READ_STANDARD_FILE_SECURE_COMMAND, readDataCommand);
+            log(methodName, printData("apdu", apdu));
+            response = isoDep.transceive(apdu);
+            log(methodName, printData("response", response));
+            //Log.d(TAG, methodName + printData(" response", response));
+        } catch (IOException e) {
+            Log.e(TAG, methodName + " transceive failed, IOException:\n" + e.getMessage());
+            log(methodName, "transceive failed: " + e.getMessage(), false);
+            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            return null;
+        }
+        byte[] responseBytes = returnStatusBytes(response);
+        System.arraycopy(responseBytes, 0, errorCode, 0, 2);
+        if (checkResponse(response)) {
+            Log.d(TAG, methodName + " SUCCESS, now decrypting the received data");
+            fullEncryptedData = Arrays.copyOf(response, response.length - 2);
+        } else {
+            Log.d(TAG, methodName + " FAILURE with error code " + Utils.bytesToHexNpeUpperCase(responseBytes));
+            Log.d(TAG, methodName + " error code: " + EV3.getErrorCode(responseBytes));
+            return null;
+        }
+        // note: after sending data to the card the commandCounter is increased by 1
+        CmdCounter++;
+        log(methodName, "the CmdCounter is increased by 1 to " + CmdCounter);
+        // response length: 58 data: 8b61541d54f73901c8498c71dd45bae80578c4b1581aad439a806f37517c86ad4df8970279bbb8874ef279149aaa264c3e5eceb0e37a87699100
+
+        // the fullEncryptedData is 56 bytes long, the first 48 bytes are encryptedData and the last 8 bytes are the responseMAC
+        int encryptedDataLength = fullEncryptedData.length - 8;
+        log(methodName, "The fullEncryptedData is of length " + fullEncryptedData.length + " that includedes 8 bytes for MAC");
+        log(methodName, "The encryptedData length is " + encryptedDataLength);
+        encryptedData = Arrays.copyOfRange(fullEncryptedData, 0, encryptedDataLength);
+        responseMACTruncatedReceived = Arrays.copyOfRange(fullEncryptedData, encryptedDataLength, fullEncryptedData.length);
+        log(methodName, printData("encryptedData", encryptedData));
+
+        // start decrypting the data
+        byte[] header = new byte[]{(byte) (0x5A), (byte) (0xA5)}; // fixed to 0x5AA5
+        byte[] commandCounterLsb2 =
+                Utils.intTo2ByteArrayInversed(CmdCounter);
+        byte[] padding = hexStringToByteArray("0000000000000000");
+        byte[] startingIv = new byte[16];
+        ByteArrayOutputStream decryptBaos = new ByteArrayOutputStream();
+        decryptBaos.write(header, 0, header.length);
+        decryptBaos.write(TransactionIdentifier, 0, TransactionIdentifier.length);
+        decryptBaos.write(commandCounterLsb2, 0, commandCounterLsb2.length);
+        decryptBaos.write(padding, 0, padding.length);
+        byte[] ivInputResponse = decryptBaos.toByteArray();
+        log(methodName, printData("ivInputResponse", ivInputResponse));
+        byte[] ivResponse = AES.encrypt(startingIv, SesAuthENCKey, ivInputResponse);
+        log(methodName, printData("ivResponse", ivResponse));
+        byte[] decryptedData = AES.decrypt(ivResponse, SesAuthENCKey, encryptedData);
+        log(methodName, printData("decryptedData", decryptedData));
+        byte[] readData = Arrays.copyOfRange(decryptedData, 0, length);
+        log(methodName, printData("readData", readData));
+
+        // verifying the received MAC
+        ByteArrayOutputStream responseMacBaos = new ByteArrayOutputStream();
+        responseMacBaos.write((byte) 0x00); // response code 00 means success
+        responseMacBaos.write(commandCounterLsb2, 0, commandCounterLsb2.length);
+        responseMacBaos.write(TransactionIdentifier, 0, TransactionIdentifier.length);
+        responseMacBaos.write(encryptedData, 0, encryptedData.length);
+        byte[] macInput2 = responseMacBaos.toByteArray();
+        log(methodName, printData("macInput", macInput2));
+        byte[] responseMACCalculated = calculateDiverseKey(SesAuthMACKey, macInput2);
+        log(methodName, printData("responseMACTruncatedReceived  ", responseMACTruncatedReceived));
+        log(methodName, printData("responseMACCalculated", responseMACCalculated));
+        byte[] responseMACTruncatedCalculated = truncateMAC(responseMACCalculated);
+        log(methodName, printData("responseMACTruncatedCalculated", responseMACTruncatedCalculated));
+        // compare the responseMAC's
+        if (Arrays.equals(responseMACTruncatedCalculated, responseMACTruncatedReceived)) {
+            Log.d(TAG, "responseMAC SUCCESS");
+            System.arraycopy(RESPONSE_OK, 0, errorCode, 0, RESPONSE_OK.length);
+            return readData;
+        } else {
+            Log.d(TAG, "responseMAC FAILURE");
+            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, RESPONSE_FAILURE.length);
+            return null;
+        }
     }
 
     public List<Byte> getAllKeyVersions() {
@@ -815,8 +982,8 @@ public class Ntag424DnaMethods {
             return false;
         }
         uid = tag.getId();
-        Log.d(TAG, Utils.printData("uid", uid));
-        writeToUiAppend(textView, Utils.printData("UID", uid));
+        Log.d(TAG, printData("uid", uid));
+        writeToUiAppend(textView, printData("UID", uid));
         techList = tag.getTechList();
         Log.d(TAG, "techList: " + Arrays.toString(techList));
 
@@ -884,7 +1051,7 @@ public class Ntag424DnaMethods {
 
     // rotate the array one byte to the left
     private byte[] rotateLeft(byte[] data) {
-        log("rotateLeft", Utils.printData("data", data), true);
+        log("rotateLeft", printData("data", data), true);
         byte[] ret = new byte[data.length];
         System.arraycopy(data, 1, ret, 0, data.length - 1);
         ret[data.length - 1] = data[0];
@@ -893,7 +1060,7 @@ public class Ntag424DnaMethods {
 
     // rotate the array one byte to the right
     private byte[] rotateRight(byte[] data) {
-        log("rotateRight", Utils.printData("data", data), true);
+        log("rotateRight", printData("data", data), true);
         byte[] unrotated = new byte[data.length];
         for (int i = 1; i < data.length; i++) {
             unrotated[i] = data[i - 1];
@@ -921,7 +1088,7 @@ public class Ntag424DnaMethods {
      */
 
     private byte[] getRandomData(byte[] key) {
-        log("getRandomData", Utils.printData("key", key), true);
+        log("getRandomData", printData("key", key), true);
         //Log.d(TAG, "getRandomData " + printData("var", var));
         int keyLength = key.length;
         return getRandomData(keyLength);
@@ -957,7 +1124,7 @@ public class Ntag424DnaMethods {
         // see
         // see MIFARE DESFire Light contactless application IC pdf, page 28
         final String methodName = "getSesAuthEncKey";
-        log(methodName, Utils.printData("rndA", rndA) + Utils.printData(" rndB", rndB) + Utils.printData(" authenticationKey", authenticationKey), false);
+        log(methodName, printData("rndA", rndA) + printData(" rndB", rndB) + printData(" authenticationKey", authenticationKey), false);
         // sanity checks
         if ((rndA == null) || (rndA.length != 16)) {
             log(methodName, "rndA is NULL or wrong length, aborted", false);
@@ -985,24 +1152,24 @@ public class Ntag424DnaMethods {
         byte[] rndA02to07 = new byte[6];
         byte[] rndB00to05 = new byte[6];
         rndA02to07 = Arrays.copyOfRange(rndA, 2, 8);
-        log(methodName, Utils.printData("rndA     ", rndA), false);
-        log(methodName, Utils.printData("rndA02to07", rndA02to07), false);
+        log(methodName, printData("rndA     ", rndA), false);
+        log(methodName, printData("rndA02to07", rndA02to07), false);
         rndB00to05 = Arrays.copyOfRange(rndB, 0, 6);
-        log(methodName, Utils.printData("rndB     ", rndB), false);
-        log(methodName, Utils.printData("rndB00to05", rndB00to05), false);
+        log(methodName, printData("rndB     ", rndB), false);
+        log(methodName, printData("rndB00to05", rndB00to05), false);
         byte[] xored = xor(rndA02to07, rndB00to05);
-        log(methodName, Utils.printData("xored     ", xored), false);
+        log(methodName, printData("xored     ", xored), false);
         System.arraycopy(xored, 0, cmacInput, 8, 6);
         System.arraycopy(rndB, 6, cmacInput, 14, 10);
         System.arraycopy(rndA, 8, cmacInput, 24, 8);
 
-        log(methodName, Utils.printData("rndA     ", rndA), false);
-        log(methodName, Utils.printData("rndB     ", rndB), false);
-        log(methodName, Utils.printData("cmacInput", cmacInput), false);
+        log(methodName, printData("rndA     ", rndA), false);
+        log(methodName, printData("rndB     ", rndB), false);
+        log(methodName, printData("cmacInput", cmacInput), false);
         byte[] iv = new byte[16];
-        log(methodName, Utils.printData("iv       ", iv), false);
+        log(methodName, printData("iv       ", iv), false);
         byte[] cmac = calculateDiverseKey(authenticationKey, cmacInput);
-        log(methodName, Utils.printData("cmacOut ", cmac), false);
+        log(methodName, printData("cmacOut ", cmac), false);
         return cmac;
     }
 
@@ -1022,7 +1189,7 @@ public class Ntag424DnaMethods {
         // see
         // see MIFARE DESFire Light contactless application IC pdf, page 28
         final String methodName = "getSesAuthMacKey";
-        log(methodName, Utils.printData("rndA", rndA) + Utils.printData(" rndB", rndB) + Utils.printData(" authenticationKey", authenticationKey), false);
+        log(methodName, printData("rndA", rndA) + printData(" rndB", rndB) + printData(" authenticationKey", authenticationKey), false);
         // sanity checks
         if ((rndA == null) || (rndA.length != 16)) {
             log(methodName, "rndA is NULL or wrong length, aborted", false);
@@ -1050,31 +1217,31 @@ public class Ntag424DnaMethods {
         byte[] rndA02to07 = new byte[6];
         byte[] rndB00to05 = new byte[6];
         rndA02to07 = Arrays.copyOfRange(rndA, 2, 8);
-        log(methodName, Utils.printData("rndA     ", rndA), false);
-        log(methodName, Utils.printData("rndA02to07", rndA02to07), false);
+        log(methodName, printData("rndA     ", rndA), false);
+        log(methodName, printData("rndA02to07", rndA02to07), false);
         rndB00to05 = Arrays.copyOfRange(rndB, 0, 6);
-        log(methodName, Utils.printData("rndB     ", rndB), false);
-        log(methodName, Utils.printData("rndB00to05", rndB00to05), false);
+        log(methodName, printData("rndB     ", rndB), false);
+        log(methodName, printData("rndB00to05", rndB00to05), false);
         byte[] xored = xor(rndA02to07, rndB00to05);
-        log(methodName, Utils.printData("xored     ", xored), false);
+        log(methodName, printData("xored     ", xored), false);
         System.arraycopy(xored, 0, cmacInput, 8, 6);
         System.arraycopy(rndB, 6, cmacInput, 14, 10);
         System.arraycopy(rndA, 8, cmacInput, 24, 8);
 
-        log(methodName, Utils.printData("rndA     ", rndA), false);
-        log(methodName, Utils.printData("rndB     ", rndB), false);
-        log(methodName, Utils.printData("cmacInput", cmacInput), false);
+        log(methodName, printData("rndA     ", rndA), false);
+        log(methodName, printData("rndB     ", rndB), false);
+        log(methodName, printData("cmacInput", cmacInput), false);
         byte[] iv = new byte[16];
-        log(methodName, Utils.printData("iv       ", iv), false);
+        log(methodName, printData("iv       ", iv), false);
         byte[] cmac = calculateDiverseKey(authenticationKey, cmacInput);
-        log(methodName, Utils.printData("cmacOut ", cmac), false);
+        log(methodName, printData("cmacOut ", cmac), false);
         return cmac;
     }
 
     public byte[] getSesSDMFileReadMACKey(byte[] sdmFileReadKey, byte[] uid, byte[] sdmReadCounter) {
         // see NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf pages 15 - 18
         final String methodName = "getSesSDMFileReadMACKey";
-        log(methodName, Utils.printData("sdmFileReadKey", sdmFileReadKey) + Utils.printData(" uid", uid) + Utils.printData(" sdmReadCounter", sdmReadCounter), true);
+        log(methodName, printData("sdmFileReadKey", sdmFileReadKey) + printData(" uid", uid) + printData(" sdmReadCounter", sdmReadCounter), true);
         // sanity checks
         if ((sdmFileReadKey == null) || (sdmFileReadKey.length != 16)) {
             log(methodName, "sdmFileReadKey is NULL or wrong length, aborted");
@@ -1099,16 +1266,16 @@ public class Ntag424DnaMethods {
         System.arraycopy(uid, 0, cmacInput, 6, 7);
         System.arraycopy(sdmReadCounter, 0, cmacInput, 13, 3);
         // todo this method is working only when UID and readCtr are present, if not the byte array is filled up with 00 to 16 bytes
-        log(methodName, Utils.printData("cmacInput", cmacInput));
+        log(methodName, printData("cmacInput", cmacInput));
         byte[] cmac = calculateDiverseKey(sdmFileReadKey, cmacInput);
-        log(methodName, Utils.printData("cmacOutput", cmac));
+        log(methodName, printData("cmacOutput", cmac));
         return cmac;
     }
 
     public byte[] getSdmMac(byte[] sesSDMFileReadMACKey) {
         // see NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf pages 15 - 18
         final String methodName = "getSdmMac";
-        log(methodName, Utils.printData("sesSDMFileReadMACKey", sesSDMFileReadMACKey), true);
+        log(methodName, printData("sesSDMFileReadMACKey", sesSDMFileReadMACKey), true);
         // sanity checks
         if ((sesSDMFileReadMACKey == null) || (sesSDMFileReadMACKey.length != 16)) {
             log(methodName, "sesSDMFileReadMACKey is NULL or wrong length, aborted");
@@ -1118,7 +1285,7 @@ public class Ntag424DnaMethods {
     }
 
     public byte[] calculateDiverseKey(byte[] masterKey, byte[] input) {
-        Log.d(TAG, "calculateDiverseKey" + Utils.printData(" masterKey", masterKey) + Utils.printData(" input", input));
+        Log.d(TAG, "calculateDiverseKey" + printData(" masterKey", masterKey) + printData(" input", input));
         AesCmac mac = null;
         try {
             mac = new AesCmac();
@@ -1134,8 +1301,26 @@ public class Ntag424DnaMethods {
         return mac.doFinal();
     }
 
+    private byte[] truncateMAC(byte[] fullMAC) {
+        final String methodName = "truncateMAC";
+        log(methodName, printData("fullMAC", fullMAC), true);
+        if ((fullMAC == null) || (fullMAC.length < 2)) {
+            log(methodName, "fullMAC is NULL or of wrong length, aborted");
+            return null;
+        }
+        int fullMACLength = fullMAC.length;
+        byte[] truncatedMAC = new byte[fullMACLength / 2];
+        int truncatedMACPos = 0;
+        for (int i = 1; i < fullMACLength; i += 2) {
+            truncatedMAC[truncatedMACPos] = fullMAC[i];
+            truncatedMACPos++;
+        }
+        log(methodName, printData("truncatedMAC", truncatedMAC));
+        return truncatedMAC;
+    }
+
     private byte[] xor(byte[] dataA, byte[] dataB) {
-        log("xor", Utils.printData("dataA", dataA) + Utils.printData(" dataB", dataB), true);
+        log("xor", printData("dataA", dataA) + printData(" dataB", dataB), true);
         if ((dataA == null) || (dataB == null)) {
             Log.e(TAG, "xor - dataA or dataB is NULL, aborted");
             return null;
@@ -1264,7 +1449,7 @@ public class Ntag424DnaMethods {
 
     private byte[] sendRequest(byte command, byte[] parameters) throws Exception {
         String methodName = "sendRequest";
-        Log.d(TAG, methodName + " command: " + Utils.byteToHex(command) + Utils.printData(" parameters", parameters));
+        Log.d(TAG, methodName + " command: " + Utils.byteToHex(command) + printData(" parameters", parameters));
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         //byte[] recvBuffer = isoDep.transceive(wrapMessage(command, parameters));
         byte[] recvBuffer = sendData(wrapMessage(command, parameters));
@@ -1305,7 +1490,7 @@ public class Ntag424DnaMethods {
 
     private byte[] sendData(byte[] apdu) {
         String methodName = "sendData";
-        log(methodName, Utils.printData("send apdu -->", apdu));
+        log(methodName, printData("send apdu -->", apdu));
         byte[] recvBuffer;
         try {
             recvBuffer = isoDep.transceive(apdu);
@@ -1315,7 +1500,7 @@ public class Ntag424DnaMethods {
             e.printStackTrace();
             return null;
         }
-        log(methodName, Utils.printData("received  <--", recvBuffer));
+        log(methodName, printData("received  <--", recvBuffer));
         return recvBuffer;
     }
 

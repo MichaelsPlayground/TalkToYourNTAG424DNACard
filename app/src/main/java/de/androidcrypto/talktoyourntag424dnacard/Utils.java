@@ -191,6 +191,14 @@ public class Utils {
     private int byteArrayLength3InversedToInt(byte[] data) {
         return (data[2] & 0xff) << 16 | (data[1] & 0xff) << 8 | (data[0] & 0xff);
     }
+
+    // converts an int to a 2 byte long array inversed = LSB
+    public static byte[] intTo2ByteArrayInversed(int value) {
+        return new byte[]{
+                (byte) value,
+                (byte) (value >> 8)};
+    }
+
     /**
      * Returns a byte array with length = 4
      * @param value
