@@ -754,15 +754,17 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 exportStringFileName = "auth.html";
 
                 byte[] responseData = new byte[2];
-                boolean success = desfireAuthenticateEv2.authenticateAesEv2First(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_AES_DEFAULT);
-                responseData = desfireAuthenticateEv2.getErrorCode();
+                //boolean success = desfireAuthenticateEv2.authenticateAesEv2First(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_AES_DEFAULT);
+                boolean success = ntag424DnaMethods.authenticateEv2First(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_AES_DEFAULT);
+                //responseData = desfireAuthenticateEv2.getErrorCode();
+                responseData = ntag424DnaMethods.getErrorCode();
                 if (success) {
                     writeToUiAppend(output, logString + " SUCCESS");
                     writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    SES_AUTH_ENC_KEY = desfireAuthenticateEv2.getSesAuthENCKey();
-                    SES_AUTH_MAC_KEY = desfireAuthenticateEv2.getSesAuthMACKey();
-                    TRANSACTION_IDENTIFIER = desfireAuthenticateEv2.getTransactionIdentifier();
-                    CMD_COUNTER = desfireAuthenticateEv2.getCmdCounter();
+                    SES_AUTH_ENC_KEY = ntag424DnaMethods.getSesAuthENCKey();
+                    SES_AUTH_MAC_KEY = ntag424DnaMethods.getSesAuthMACKey();
+                    TRANSACTION_IDENTIFIER = ntag424DnaMethods.getTransactionIdentifier();
+                    CMD_COUNTER = ntag424DnaMethods.getCmdCounter();
                     writeToUiAppend(output, printData("SES_AUTH_ENC_KEY", SES_AUTH_ENC_KEY));
                     writeToUiAppend(output, printData("SES_AUTH_MAC_KEY", SES_AUTH_MAC_KEY));
                     writeToUiAppend(output, printData("TRANSACTION_IDENTIFIER", TRANSACTION_IDENTIFIER));
@@ -771,7 +773,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                     // show logData
 
                     // prepare data for export
-                    exportString = desfireAuthenticateEv2.getLogData();
+                    exportString = ntag424DnaMethods.getLogData();
                     exportStringFileName = "auth0a_ev2.html";
                     writeToUiToast("your authentication log file is ready for export");
 

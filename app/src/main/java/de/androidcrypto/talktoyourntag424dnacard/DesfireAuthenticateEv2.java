@@ -79,7 +79,6 @@ public class DesfireAuthenticateEv2 {
     private boolean authenticateEv2FirstSuccess = false;
     private boolean authenticateEv2NonFirstSuccess = false;
     private byte keyNumberUsedForAuthentication = -1;
-
     private byte[] SesAuthENCKey; // filled by authenticateAesEv2First
     private byte[] SesAuthMACKey; // filled by authenticateAesEv2First
     private int CmdCounter = 0; // filled / resetted by authenticateAesEv2First
@@ -5150,7 +5149,6 @@ F121h = SDMAccessRights (RFU: 0xF, FileAR.SDMCtrRet = 0x1, FileAR.SDMMetaRead: 0
     /**
      * section for key handling and byte operations
      */
-
 
     private byte[] getRandomData(byte[] key) {
         log("getRandomData", printData("key", key), true);
