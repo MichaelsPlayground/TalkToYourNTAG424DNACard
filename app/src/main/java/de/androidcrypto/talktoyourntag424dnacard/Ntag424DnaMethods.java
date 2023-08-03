@@ -84,8 +84,10 @@ public class Ntag424DnaMethods {
      * NTAG 424 DNA specific constants
      */
 
-    private static final byte[] NTAG_424_DNA_DF_APPLICATION_NAME = Utils.hexStringToByteArray("D2760000850101");
-
+    private final byte[] NTAG_424_DNA_DF_APPLICATION_NAME = Utils.hexStringToByteArray("D2760000850101");
+    private static final byte STANDARD_FILE_NUMBER_01_CC = (byte) 0x01;
+    private static final byte STANDARD_FILE_NUMBER_02 = (byte) 0x02;
+    private static final byte STANDARD_FILE_NUMBER_03 = (byte) 0x03;
 
     // Status codes
     private static final byte OPERATION_OK = (byte) 0x00;
@@ -161,13 +163,14 @@ public class Ntag424DnaMethods {
 
     public FileSettings[] getAllFileSettings() {
         // returns the fileSettings of all 3 pre installed files on NTAG 424 DNA
-
-
-
+        FileSettings[] fileSettings = new FileSettings[3];
+        fileSettings[0] = new FileSettings(STANDARD_FILE_NUMBER_01_CC, getFileSettings(STANDARD_FILE_NUMBER_01_CC));
+        fileSettings[1] = new FileSettings(STANDARD_FILE_NUMBER_02, getFileSettings(STANDARD_FILE_NUMBER_02));
+        fileSettings[2] = new FileSettings(STANDARD_FILE_NUMBER_03, getFileSettings(STANDARD_FILE_NUMBER_03));
         return null;
     }
 
-    private boolean getFileSettings(byte fileNumber) {
+    private byte[] getFileSettings(byte fileNumber) {
         String logData = "";
         final String methodName = "getFileSettings";
         log(methodName, "started", true);
@@ -175,17 +178,17 @@ public class Ntag424DnaMethods {
         if (!isTagNtag424Dna) {
             errorCode = RESPONSE_FAILURE.clone();
             errorCodeReason = "discovered tag is not a NTAG424DNA tag, aborted";
-            return false;
+            return null;
         }
         if (isoDep == null) {
             errorCode = RESPONSE_FAILURE.clone();
             errorCodeReason = "isoDep is NULL (maybe it is not a NTAG424DNA tag ?), aborted";
-            return false;
+            return null;
         }
         if ((fileNumber < (byte) 0x01) || (fileNumber > (byte) 0x03)) {
             errorCode = RESPONSE_FAILURE.clone();
             errorCodeReason = "fileNumber not in range 1..3, aborted";
-            return false;
+            return null;
         }
         byte[] apdu = new byte[0];
         byte[] response;
@@ -200,12 +203,12 @@ public class Ntag424DnaMethods {
             errorCode = RESPONSE_OK.clone();
             errorCodeReason = methodName + " SUCCESS";
             isApplicationSelected = true;
-            return true;
+            return getData(response);
         } else {
             log(methodName, methodName + " FAILURE");
             errorCode = RESPONSE_FAILURE.clone();
             errorCodeReason = methodName + " FAILURE";
-            return false;
+            return null;
         }
     }
 
@@ -344,6 +347,19 @@ public class Ntag424DnaMethods {
     }
 
     /**
+     * Returns a copy of the data bytes in the response body. If this APDU as
+     * no body, this method returns a byte array with a length of zero.
+     *
+     * @return a copy of the data bytes in the response body or the empty
+     * byte array if this APDU has no body.
+     */
+    private byte[] getData(byte[] responseAPDU) {
+        byte[] data = new byte[responseAPDU.length - 2];
+        System.arraycopy(responseAPDU, 0, data, 0, data.length);
+        return data;
+    }
+
+    /**
      * sendRequest is a one byte command without parameter
      * @param command
      * @return
@@ -458,5 +474,9 @@ public class Ntag424DnaMethods {
 
     public String getErrorCodeReason() {
         return errorCodeReason;
+    }
+
+    public byte[] getNTAG_424_DNA_DF_APPLICATION_NAME() {
+        return NTAG_424_DNA_DF_APPLICATION_NAME;
     }
 }

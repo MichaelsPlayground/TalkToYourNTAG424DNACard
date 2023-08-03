@@ -266,6 +266,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
 
     int COLOR_GREEN = Color.rgb(0, 255, 0);
     int COLOR_RED = Color.rgb(255, 0, 0);
+    private final String outputDivider = "--------------";
 
     // variables for NFC handling
 
@@ -545,6 +546,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 if (success) {
                     writeToUiAppend(output, logString + " SUCCESS");
                     writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
+                    selectedApplicationId = ntag424DnaMethods.getNTAG_424_DNA_DF_APPLICATION_NAME().clone();
                     vibrateShort();
                 } else {
                     writeToUiAppend(output, logString + " FAILURE");
@@ -2140,7 +2142,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 byte[] responseData = new byte[2];
                 //FileSettings[] result = desfireAuthenticateEv2.getAllFileSettingsEv2();
                 FileSettings[] result = ntag424DnaMethods.getAllFileSettings();
-                responseData = desfireAuthenticateEv2.getErrorCode();
+                responseData = ntag424DnaMethods.getErrorCode();
                 if (result != null) {
                     int numberOfFfileSettings = result.length;
                     for (int i = 0; i < numberOfFfileSettings; i++) {
@@ -2148,6 +2150,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                         FileSettings fileSettings = result[i];
                         if (fileSettings != null) {
                             writeToUiAppend(output, fileSettings.dump());
+                            writeToUiAppend(output, outputDivider);
                         }
                     }
                     writeToUiAppend(output, logString + " SUCCESS");
