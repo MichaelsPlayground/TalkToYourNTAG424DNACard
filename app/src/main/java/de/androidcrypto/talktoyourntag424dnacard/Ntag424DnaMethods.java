@@ -159,6 +159,14 @@ public class Ntag424DnaMethods {
         }
     }
 
+    public FileSettings[] getAllFileSettings() {
+        // returns the fileSettings of all 3 pre installed files on NTAG 424 DNA
+
+
+
+        return null;
+    }
+
     private boolean getFileSettings(byte fileNumber) {
         String logData = "";
         final String methodName = "getFileSettings";

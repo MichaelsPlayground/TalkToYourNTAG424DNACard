@@ -2130,6 +2130,42 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
             @Override
             public void onClick(View view) {
                 clearOutputFields();
+                String logString = "get all file settings from a selected application";
+                writeToUiAppend(output, logString);
+                if (selectedApplicationId == null) {
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
+                    return;
+                }
+
+                byte[] responseData = new byte[2];
+                //FileSettings[] result = desfireAuthenticateEv2.getAllFileSettingsEv2();
+                FileSettings[] result = ntag424DnaMethods.getAllFileSettings();
+                responseData = desfireAuthenticateEv2.getErrorCode();
+                if (result != null) {
+                    int numberOfFfileSettings = result.length;
+                    for (int i = 0; i < numberOfFfileSettings; i++) {
+                        // first check that this entry is not null
+                        FileSettings fileSettings = result[i];
+                        if (fileSettings != null) {
+                            writeToUiAppend(output, fileSettings.dump());
+                        }
+                    }
+                    writeToUiAppend(output, logString + " SUCCESS");
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
+                    vibrateShort();
+                } else {
+                    writeToUiAppend(output, logString + " FAILURE with error " + EV3.getErrorCode(responseData));
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
+                    writeToUiAppend(errorCode, "Depending on the Application Master Keys settings a previous authentication with the Application Master Key is required");
+                }
+            }
+        });
+
+        /*
+        getFileSettings.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
                 String logString = "get file settings";
                 writeToUiAppend(output, logString);
                 // check that a file was selected before
@@ -2164,6 +2200,8 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 }
             }
         });
+
+         */
 
         changeFileSettings.setOnClickListener(new View.OnClickListener() {
             @Override
