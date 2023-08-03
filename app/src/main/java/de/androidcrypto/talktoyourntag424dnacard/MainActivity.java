@@ -754,9 +754,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 exportStringFileName = "auth.html";
 
                 byte[] responseData = new byte[2];
-                //boolean success = desfireAuthenticateEv2.authenticateAesEv2First(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_AES_DEFAULT);
-                boolean success = ntag424DnaMethods.authenticateEv2First(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_AES_DEFAULT);
-                //responseData = desfireAuthenticateEv2.getErrorCode();
+                boolean success = ntag424DnaMethods.authenticateAesEv2First(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_AES_DEFAULT);
                 responseData = ntag424DnaMethods.getErrorCode();
                 if (success) {
                     writeToUiAppend(output, logString + " SUCCESS");
@@ -2150,8 +2148,11 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                     for (int i = 0; i < numberOfFfileSettings; i++) {
                         // first check that this entry is not null
                         FileSettings fileSettings = result[i];
-                        if (fileSettings != null) {
+                        if (fileSettings.getCompleteResponse() != null) {
                             writeToUiAppend(output, fileSettings.dump());
+                            writeToUiAppend(output, outputDivider);
+                        } else {
+                            writeToUiAppend(output, "could not retrieve fileSettings");
                             writeToUiAppend(output, outputDivider);
                         }
                     }
