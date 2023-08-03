@@ -116,6 +116,15 @@ public class Ntag424DnaMethods {
         return selectNdefApplicationIso(NTAG_424_DNA_DF_APPLICATION_NAME);
     }
 
+    /**
+     * selects an application on the discovered tag by application name (ISO command)
+     * @param dfApplicationName
+     * @return
+     *
+     * Note: The NTAG 424 DNA has ONE pre defined application with name "D2760000850101"
+     * see NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf pages 25-26
+     */
+
     private boolean selectNdefApplicationIso(byte[] dfApplicationName) {
         String logData = "";
         final String methodName = "selectNdefApplicationIso";
@@ -167,9 +176,17 @@ public class Ntag424DnaMethods {
         fileSettings[0] = new FileSettings(STANDARD_FILE_NUMBER_01_CC, getFileSettings(STANDARD_FILE_NUMBER_01_CC));
         fileSettings[1] = new FileSettings(STANDARD_FILE_NUMBER_02, getFileSettings(STANDARD_FILE_NUMBER_02));
         fileSettings[2] = new FileSettings(STANDARD_FILE_NUMBER_03, getFileSettings(STANDARD_FILE_NUMBER_03));
-        return null;
+        return fileSettings;
     }
 
+    /**
+     * reads the fileSettings of a file and returns a byte array that length depends on settings on
+     * Secure Dynamic Messaging (SDM) - if enabled the length is longer than 7 bytes (disabled SDM)
+     * @param fileNumber
+     * @return
+     *
+     * see NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf pages 26-27
+     */
     private byte[] getFileSettings(byte fileNumber) {
         String logData = "";
         final String methodName = "getFileSettings";
@@ -292,6 +309,13 @@ public class Ntag424DnaMethods {
             return false;
         }
     }
+
+    /**
+     * get the version information of the discovered tag
+     * @return the analyzed version information class
+     *
+     * see NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf pages 27-28
+     */
 
     public VersionInfo getVersionInfo() {
         try {
@@ -431,7 +455,7 @@ public class Ntag424DnaMethods {
             e.printStackTrace();
             return null;
         }
-        log(methodName, Utils.printData("received  -->", recvBuffer));
+        log(methodName, Utils.printData("received  <--", recvBuffer));
         return recvBuffer;
     }
 

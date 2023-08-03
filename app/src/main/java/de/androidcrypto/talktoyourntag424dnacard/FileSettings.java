@@ -1,5 +1,7 @@
 package de.androidcrypto.talktoyourntag424dnacard;
 
+import android.util.Log;
+
 import java.util.Arrays;
 
 /**
@@ -23,6 +25,7 @@ import java.util.Arrays;
  */
 
 public class FileSettings {
+    private static final String TAG = FileSettings.class.getName();
 
     private byte fileNumber;
     private byte fileType;
@@ -240,6 +243,7 @@ public class FileSettings {
      * At the moment the SDM enriched fileSettings may occur on Standard files only ?
      */
     private void analyzeSdmEnrichedFileSettings(int position) {
+        Log.d(TAG, "analyzeSdmEnrichedFileSettings started at position " + position);
         // typical getFileSettings respond 00 40 00 E0 00 01 00 C1 F1 21 20 00 00 43 00 00 43 00 00 (19 bytes)
         // I'm using the name 'fileOption' for byte 1 that is communication settings without SDM
         sdmFileOption = communicationSettings;
@@ -651,3 +655,46 @@ public class FileSettings {
         return SDM_ReadCtrLimit;
     }
 }
+
+/*
+fileSettings of fabric tag:
+fileNumber: 1
+received  <-- length: 9 data: 000000e02000009100
+
+fileType: 0 (Standard)
+communicationSettings: 00 (Plain)
+accessRights RW | CAR: 00
+accessRights R | W: E0
+accessRights RW:  0
+accessRights CAR: 0
+accessRights R:   14
+accessRights W:   0
+fileSize: 32
+
+fileNumber: 2
+received  <-- length: 9 data: 0000e0ee0001009100
+
+fileType: 0 (Standard)
+communicationSettings: 00 (Plain)
+accessRights RW | CAR: E0
+accessRights R | W: EE
+accessRights RW:  14
+accessRights CAR: 0
+accessRights R:   14
+accessRights W:   14
+fileSize: 256
+
+fileNumber: 3
+received  <-- length: 9 data: 000330238000009100
+
+fileType: 0 (Standard)
+communicationSettings: 03 (Encrypted)
+accessRights RW | CAR: 30
+accessRights R | W: 23
+accessRights RW:  3
+accessRights CAR: 0
+accessRights R:   2
+accessRights W:   3
+fileSize: 128
+
+ */
