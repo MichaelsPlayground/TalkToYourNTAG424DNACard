@@ -51,6 +51,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements NfcAdapter.ReaderCallback {
 
@@ -147,6 +148,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
 
     private Button getCardUidDes, getCardUidAes; // get cardUID * encrypted
     private Button getTagVersion, formatPicc;
+    private Button getKeyVersion;
 
     /**
      * section for visualizing DES authentication
@@ -402,6 +404,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         getCardUidAes = findViewById(R.id.btnGetCardUidAes);
         getTagVersion = findViewById(R.id.btnGetTagVersion);
         formatPicc = findViewById(R.id.btnFormatPicc);
+        getKeyVersion = findViewById(R.id.btnGetKeyVersion);
 
         // visualize DES authentication
         selectApplicationDesVisualizing = findViewById(R.id.btnDesVisualizeAuthSelect);
@@ -3849,6 +3852,29 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
             }
         });
 
+        getKeyVersion.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "getKeyVersion";
+                writeToUiAppend(output, logString);
+
+                byte[] responseData = new byte[2];
+                List<Byte> result = ntag424DnaMethods.getAllKeyVersions();
+                if (result.isEmpty()) {
+                    writeToUiAppend(output, logString + " FAILURE");
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE", COLOR_RED);
+                } else {
+                    writeToUiAppend(output, logString + " SUCCESS");
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
+                    for (int i = 0; i < result.size(); i++) {
+                        writeToUiAppend(output,"keyNumber " + i + " keyVersion: " + result.get(i).toString());
+                    }
+                    vibrateShort();
+                }
+            }
+        });
+
         /**
          * section for sdm handling
          */
@@ -4877,6 +4903,7 @@ C1h =
     /**
      * section for key handling
      */
+
 
 
     /**

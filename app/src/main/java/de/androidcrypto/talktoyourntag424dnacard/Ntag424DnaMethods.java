@@ -16,7 +16,9 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -108,6 +110,7 @@ public class Ntag424DnaMethods {
      */
 
     private static final byte GET_VERSION_INFO_COMMAND = (byte) 0x60;
+    private static final byte GET_KEY_VERSION_COMMAND = (byte) 0x64;
     private static final byte GET_ADDITIONAL_FRAME_COMMAND = (byte) 0xAF;
     private static final byte SELECT_APPLICATION_ISO_COMMAND = (byte) 0xA4;
     private static final byte GET_FILE_SETTINGS_COMMAND = (byte) 0xF5;
@@ -287,7 +290,9 @@ public class Ntag424DnaMethods {
             apdu = wrapMessage(GET_FILE_SETTINGS_COMMAND, new byte[]{fileNumber});
             response = sendData(apdu);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "IOException: " + e.getMessage();
+            return null;
         }
         if (checkResponse(response)) {
             log(methodName, methodName + " SUCCESS");
@@ -572,7 +577,6 @@ public class Ntag424DnaMethods {
             System.arraycopy(RESPONSE_FAILURE_MISSING_AUTHENTICATION, 0, errorCode, 0, 2);
             return false;
         }
-
         if (keyNo < 0) {
             Log.e(TAG, methodName + " keyNumber is < 0, aborted");
             System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
@@ -739,6 +743,64 @@ public class Ntag424DnaMethods {
         return rndAEqual;
     }
 
+    public List<Byte> getAllKeyVersions() {
+        List<Byte> byteList = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            byte keyVersion = getKeyVersion((byte) (i & 0x0f));
+            byteList.add(keyVersion);
+        }
+        return byteList;
+    }
+
+
+    public byte getKeyVersion(byte keyNumber) {
+        final String methodName = "getKeyVersion";
+        log(methodName, "keyNumber: " + keyNumber, true);
+        errorCode = new byte[2];
+        // sanity checks
+        if (keyNumber < 0) {
+            Log.e(TAG, methodName + " keyNumber is < 0, aborted");
+            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            return -1;
+        }
+        if (keyNumber > 14) {
+            Log.e(TAG, methodName + " keyNumber is > 14, aborted");
+            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            return -1;
+        }
+        if ((isoDep == null) || (!isoDep.isConnected())) {
+            Log.e(TAG, methodName + " lost connection to the card, aborted");
+            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            return -1;
+        }
+        byte[] apdu;
+        byte[] response;
+        try {
+            apdu = wrapMessage(GET_KEY_VERSION_COMMAND, new byte[]{keyNumber});
+            response = sendData(apdu);
+        } catch (Exception e) {
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "Exception: " + e.getMessage();
+            Log.e(TAG, e.getMessage());
+            e.printStackTrace();
+            return -1;
+        }
+        if (checkResponse(response)) {
+            log(methodName, methodName + " SUCCESS");
+            errorCode = RESPONSE_OK.clone();
+            errorCodeReason = methodName + " SUCCESS";
+            isApplicationSelected = true;
+            return getData(response)[0];
+        } else {
+            log(methodName, methodName + " FAILURE");
+            byte[] responseBytes = returnStatusBytes(response);
+            System.arraycopy(responseBytes, 0, errorCode, 0, 2);
+            errorCodeReason = methodName + " FAILURE";
+            return -1;
+        }
+
+
+    }
 
 
     /**
