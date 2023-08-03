@@ -667,7 +667,7 @@ public class FileSettings {
 }
 
 /*
-fileSettings of fabric tag:
+fileSettings of factory settings tag:
 fileNumber: 1
 received  <-- length: 9 data: 000000e02000009100
 

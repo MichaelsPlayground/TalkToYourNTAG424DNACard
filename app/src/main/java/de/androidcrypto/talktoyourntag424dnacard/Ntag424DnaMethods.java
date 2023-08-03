@@ -61,6 +61,15 @@ ISOUpdateBinary                    00  D6 CommMode.Plain
 WriteData                          90  8D Comm. mode of targeted file
  */
 
+/*
+A NTAG 424 DNA tag contains 3 pre defined Standard files (factory settings):
+ File             Access Right keys
+number | Length | RW | CAR | R | W | Communication mode
+  01h  |    32  |  0 |  0  | E | 0 | CommMode.Plain
+  02h  |   256  |  E |  E  | 0 | E | CommMode.Plain
+  03h  |   128  |  3 |  0  | 2 | 3 | CommMode.Full
+ */
+
 public class Ntag424DnaMethods {
 
     private static final String TAG = Ntag424DnaMethods.class.getName();
