@@ -2095,6 +2095,11 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 boolean successTest = ntag424DnaMethods.writeStandardFileFull((byte) 0x03, "123".getBytes(StandardCharsets.UTF_8), 0, 3, true);
                 writeToUiAppend(output, "TEST_MODE result: " + successTest);
 
+                byte[] dataToWrite = Utils.hexStringToByteArray("0102030405060708090A");
+                boolean success = ntag424DnaMethods.writeStandardFileFull((byte) 0x03, dataToWrite, 0, dataToWrite.length, false);
+                writeToUiAppend(output, "REAL_MODE result: " + success);
+
+                /*
                 if (!TextUtils.isEmpty(logString)) return;
                 // ending TEST
 
@@ -2129,6 +2134,8 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                     }
                     writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
                 }
+
+                 */
             }
         });
 
