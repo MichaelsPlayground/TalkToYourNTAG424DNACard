@@ -1,0 +1,79 @@
+6.12
+Write to Proprietary File - using Cmd.WriteData, CommMode.FULL Table 22. Write Proprietary File (0xE105) - using Cmd.WriteData
+Step
+1
+3 4 5 6 7
+9
+Command Data
+Cmd
+KSesAuthENC
+CmdHeader
+CmdCtr
+TI (as generated in Auth.) CmdData
+IVc
+= 8D =
+= 7A93D6571E4B180FCA6AC90C9A7488D4 = 03 000000 000000
+= 0000
+= 7614281A
+= 0102030405060708090A =
+= 4C651A64261A90307B6C293F611C7F7B =
+2
+KSesAuthMAC (as generated in Auth. [Table 20])
+8
+IVc = E(KSesAuthENC, A55A || TI || CmdCtr || 0000000000000000)
+10
+E(KSesAuthENC, IVc, CmdData || Padding (if necessary))
+11
+E(KSesAuthENC, IVc, CmdData || Padding (if necessary))
+12
+Cmd || CmdCounter || TI || CmdHeader || E(KSesAuthENC, CmdData)
+13
+MAC(KSesAuthMAC, Cmd || CmdCounter || TI || CmdHeader || E(KSesAuthENC, CmdData) )
+E(KSesAuthENC, IVc, 0102030405060708090A || 800000000000)
+6B5E6804909962FC4E3FF5522CF0F843
+8D00007614281A030000000A00006B5E6804909 962FC4E3FF5522CF0F843
+426CD70CE153ED315E5B139CB97384AA
+AN12196
+=
+All information provided in this document is subject to legal disclaimers.
+Rev. 1.8 — 17 November 2020 507218
+© NXP B.V. 2020. All rights reserved.
+37 / 59
+8
+14
+17
+MACt
+R-APDU's MACt
+= =
+=
+= 6C0C53315B9C73AA >
+<
+= C26D236E4A7C046D =
+Command
+Command data (ISO7816 – EF Name)
+FC4AF159B62E549B5812394CAB1918CC
+E(KSesAuthENC, A55A || 7614281A || 0000 || 0000000000000000)
+15
+Cmd.SetConfiguration C-APDU
+16
+R-APDU ( ResponseCode || (E(KSesAuthENC, ResponseData) || MACt )
+908D00001F030000000A00006B5E6804909962F C4E3FF5522CF0F8436C0C53315B9C73AA00
+9100 C26D236E4A7C046D
+18
+Status || CmdCounter + 1 || TI || (E(KSesAuthENC, ResponseData)
+19
+MAC(KSesAuthMAC, Status
+|| CmdCounter + 1 || TI || (E(KSesAuthENC, ResponseData) )
+0001007614281A
+86C2486D35237F6E974A437C4004C46D
+
+Table 22. Write Proprietary File (0xE105) - using Cmd.WriteData...continued
+21
+Compare R-APDU's MACt and calculated MACt from step 14
+6.13
+Step Command Data
+20 MACt = FC222E5F7A542452 =
+ISO SELECT CC file by EF Name
+This step is not needed, if for Writing the data to the file is done by Cmd.WriteData (and not Cmd.ISOUpdateBinary).
+Table 23. Select NDEF Application using Cmd.Select Step
+true - Integrity of message received from the PICC verified

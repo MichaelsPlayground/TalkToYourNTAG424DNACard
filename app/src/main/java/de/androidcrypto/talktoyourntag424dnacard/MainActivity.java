@@ -2092,7 +2092,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
 
                 writeToUiAppend(output, "This is using the TEST_MODE");
 
-                boolean successTest = ntag424DnaMethods.writeStandardFileFull((byte) 0x03, "123".getBytes(StandardCharsets.UTF_8), true);
+                boolean successTest = ntag424DnaMethods.writeStandardFileFull((byte) 0x03, "123".getBytes(StandardCharsets.UTF_8), 0, 3, true);
                 writeToUiAppend(output, "TEST_MODE result: " + successTest);
 
                 if (!TextUtils.isEmpty(logString)) return;

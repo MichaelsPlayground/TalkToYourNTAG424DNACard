@@ -1,6 +1,8 @@
 package de.androidcrypto.talktoyourntag424dnacard;
 
 import static de.androidcrypto.talktoyourntag424dnacard.Utils.hexStringToByteArray;
+import static de.androidcrypto.talktoyourntag424dnacard.Utils.intFrom3ByteArrayInversed;
+import static de.androidcrypto.talktoyourntag424dnacard.Utils.intTo3ByteArrayInversed;
 import static de.androidcrypto.talktoyourntag424dnacard.Utils.printData;
 
 import android.app.Activity;
@@ -157,6 +159,8 @@ public class Ntag424DnaMethods {
 
     private static final byte[] RESPONSE_FAILURE_MISSING_GET_FILE_SETTINGS = new byte[]{(byte) 0x91, (byte) 0xFD};
     private static final byte[] RESPONSE_FAILURE_MISSING_AUTHENTICATION = new byte[]{(byte) 0x91, (byte) 0xFE};
+    private static final byte[] HEADER_ENC = new byte[]{(byte) (0x5A), (byte) (0xA5)}; // fixed to 0x5AA5
+    private static final byte[] HEADER_MAC = new byte[]{(byte) (0xA5), (byte) (0x5A)}; // fixed to 0x5AA5
 
     private static final byte[] PADDING_FULL = hexStringToByteArray("80000000000000000000000000000000");
 
@@ -986,7 +990,7 @@ public class Ntag424DnaMethods {
 
 
 
-    public boolean writeStandardFileFull(byte fileNumber, byte[] dataToWrite, boolean testMode) {
+    public boolean writeStandardFileFull(byte fileNumber, byte[] dataToWrite, int offset, int length, boolean testMode) {
         // see Mifare DESFire Light Features and Hints AN12343.pdf pages 55 - 58
         // Cmd.WriteData in AES Secure Messaging using CommMode.Full
         // this is based on the write to a data file on a DESFire Light card
@@ -1013,9 +1017,15 @@ public class Ntag424DnaMethods {
         log(methodName, "fileNumber: " + fileNumber);
         log(methodName, printData("dataToWrite", dataToWrite));
         // variables for testMode
+        byte[] cmdData_expected = Utils.hexStringToByteArray("0102030405060708090A");
+        byte fileNumber_expected = (byte) 0x03;
+        int offset_expected = 0;
+        int length_expected = 10;
+        byte[] ivForCommandInput_expected = Utils.hexStringToByteArray("A55A7614281A00000000000000000000");
         byte[] ivForCommand_expected = Utils.hexStringToByteArray("4C651A64261A90307B6C293F611C7F7B");
         byte[] encryptedData_expected = Utils.hexStringToByteArray("6B5E6804909962FC4E3FF5522CF0F843");
         byte[] macInput_expected = Utils.hexStringToByteArray("8D00007614281A030000000A00006B5E6804909962FC4E3FF5522CF0F843");
+        byte[] cmdHeader_expected = Utils.hexStringToByteArray("030000000A0000");
         byte[] mac_expected = Utils.hexStringToByteArray("426CD70CE153ED315E5B139CB97384AA");
         byte[] macTruncated_expected = Utils.hexStringToByteArray("6C0C53315B9C73AA");
         byte[] apdu_expected = Utils.hexStringToByteArray("908D00001F030000000A00006B5E6804909962FC4E3FF5522CF0F8436C0C53315B9C73AA00");
@@ -1046,65 +1056,31 @@ public class Ntag424DnaMethods {
 
         // todo other sanity checks on values
 
-        /*
-        // read the file settings to get e.g. the fileSize and communication mode
-        boolean sfsSuccess = getSelectedFileSettings(fileNumber);
-        if (!sfsSuccess) {
-            log(methodName, "Could not retrieve the fileSettings for fileNumber " + fileNumber + ", aborted");
-            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
-            return false;
-        } else {
-            log(methodName, selectedFileSetting.dump());
-        }
-        */
-        //int selectedFileSize = selectedFileSetting.getFileSizeInt();
-        int selectedFileSize = 128; // todo change fixed value
-
-        // what does happen when dataToWrite is longer than selectedFileSize ?
-        // Answer: I'm trimming the data to selectedFileSize
-        byte[] dataToWriteCorrectLength;
-        if (dataToWrite.length > selectedFileSize) {
-            log(methodName, "trimming dataToWrite to length of selected fileNumber: " + selectedFileSize);
-            dataToWriteCorrectLength = Arrays.copyOfRange(dataToWrite, 0, selectedFileSize);
-        } else {
-            dataToWriteCorrectLength = dataToWrite.clone();
-        }
-
-        // next step is to pad the data according to padding rules in desfire EV2/3 for AES Secure Messaging fullMode
-        byte[] dataPadded = paddingWriteData(dataToWriteCorrectLength);
-        log(methodName, printData("data unpad", dataToWriteCorrectLength));
-        log(methodName, printData("data pad  ", dataPadded));
-
-        int numberOfDataBlocks = dataPadded.length / 16;
-        log(methodName, "number of dataBlocks: " + numberOfDataBlocks);
-        List<byte[]> dataBlockList = Utils.divideArrayToList(dataPadded, 16);
-
-        // Encrypting the Command Data
-
+        // step 8
         // IV_Input (IV_Label || TI || CmdCounter || Padding)
         // MAC_Input
         byte[] commandCounterLsb1 = Utils.intTo2ByteArrayInversed(CmdCounter);
         log(methodName, "CmdCounter: " + CmdCounter);
         log(methodName, printData("commandCounterLsb1", commandCounterLsb1));
-        byte[] header = new byte[]{(byte) (0xA5), (byte) (0x5A)}; // fixed to 0xA55A
+        //byte[] header = new byte[]{(byte) (0xA5), (byte) (0x5A)}; // fixed to 0xA55A
         byte[] padding1 = hexStringToByteArray("0000000000000000"); // 8 bytes
         ByteArrayOutputStream baosIvInput = new ByteArrayOutputStream();
-        baosIvInput.write(header, 0, header.length);
+        baosIvInput.write(HEADER_MAC, 0, HEADER_MAC.length);
         baosIvInput.write(TransactionIdentifier, 0, TransactionIdentifier.length);
         baosIvInput.write(commandCounterLsb1, 0, commandCounterLsb1.length);
         baosIvInput.write(padding1, 0, padding1.length);
-        byte[] ivInput = baosIvInput.toByteArray();
-        log(methodName, printData("ivInput", ivInput));
+        byte[] ivForCommandInput = baosIvInput.toByteArray();
+        log(methodName, printData("ivForCommandInput", ivForCommandInput));
         if (testMode) {
-            boolean testResult = compareTestModeValues(ivInput, ivForCommand_expected, "ivInput");
-            ivInput = ivForCommand_expected.clone();
+            boolean testResult = compareTestModeValues(ivForCommandInput, ivForCommandInput_expected, "ivInput");
+            ivForCommandInput = ivForCommand_expected.clone();
         }
 
-
+        // step 8 b encrypt to get ivForCommand
         // IV for CmdData = Enc(KSesAuthENC, IV_Input)
         log(methodName, printData("SesAuthENCKey", SesAuthENCKey));
         byte[] startingIv = new byte[16];
-        byte[] ivForCmdData = AES.encrypt(startingIv, SesAuthENCKey, ivInput);
+        byte[] ivForCmdData = AES.encrypt(startingIv, SesAuthENCKey, ivForCommandInput);
         log(methodName, printData("ivForCmdData", ivForCmdData));
 
         if (testMode) {
@@ -1112,99 +1088,66 @@ public class Ntag424DnaMethods {
             ivForCmdData = ivForCommand_expected.clone();
         }
 
-
-        // data compl   22222222222222222222222222222222222222222222222222 (25 bytes)
-        // data block 1 22222222222222222222222222222222 (16 bytes)
-        // data block 2 22222222222222222280000000000000 (16 bytes, 9 data bytes and 15 padding bytes, beginning with 0x80)
-
-        // create an empty array and copy the dataToWrite to clear the complete standard file
-        // this is done to avoid the padding
-        // todo work on this, this is rough coded
-        //byte[] fullDataToWrite = new byte[FILE_SIZE_FIXED];
-        //System.arraycopy(dataToWrite, 0, fullDataToWrite, 0, dataToWrite.length);
-
-        // here we are splitting up the data into 2 data blocks
-        //byte[] dataBlock1 = Arrays.copyOfRange(fullDataToWrite, 0, 16);
-        //byte[] dataBlock2 = Arrays.copyOfRange(fullDataToWrite, 16, 32);
-
-        //log(methodName, printData("dataBlock1", dataBlock1));
-        //log(methodName, printData("dataBlock2", dataBlock2));
-
-        List<byte[]> dataBlockEncryptedList = new ArrayList<>();
-        byte[] ivDataEncryption = ivForCmdData.clone(); // the "starting iv"
-
-        for (int i = 0; i < numberOfDataBlocks; i++) {
-            byte[] dataBlockEncrypted = AES.encrypt(ivDataEncryption, SesAuthENCKey, dataBlockList.get(i));
-            dataBlockEncryptedList.add(dataBlockEncrypted);
-            ivDataEncryption = dataBlockEncrypted.clone(); // new, subsequent iv for next encryption
+        // todo work on data that is longer than block length
+        byte[] cmdData = dataToWrite.clone();
+        if (testMode) {
+            cmdData = cmdData_expected.clone();
         }
-/*
-        // Encrypted Data Block 1 = E(KSesAuthENC, Data Input)
-        byte[] dataBlock1Encrypted = AES.encrypt(ivForCmdData, SesAuthENCKey, dataBlock1);
-        byte[] iv2 = dataBlock1Encrypted.clone();
-        log(methodName, printData("iv2", iv2));
-        byte[] dataBlock2Encrypted = AES.encrypt(iv2, SesAuthENCKey, dataBlock2); // todo is this correct ? or startingIv ?
-*/
-        //byte[] dataBlock2Encrypted = AES.encrypt(startingIv, SesAuthENCKey, dataBlock2); // todo is this correct ? or startingIv ?
-//        log(methodName, printData("startingIv", startingIv));
-        for (int i = 0; i < numberOfDataBlocks; i++) {
-            log(methodName, printData("dataBlock" + i + "Encrypted", dataBlockEncryptedList.get(i)));
-        }
-        //log(methodName, printData("dataBlock1Encrypted", dataBlock1Encrypted));
-        //log(methodName, printData("dataBlock2Encrypted", dataBlock2Encrypted));
 
-        // Encrypted Data (complete), concatenate all byte arrays
+        // step 10 encrypt cmdData after padding
+        // next step is to pad the data according to padding rules in desfire EV2/3 for AES Secure Messaging fullMode
+        byte[] dataPadded = paddingWriteData(cmdData);
+        log(methodName, printData("cmdData ", cmdData));
+        log(methodName, printData("data pad", dataPadded));
+        byte[] encryptedData = AES.encrypt(ivForCmdData, SesAuthENCKey, dataPadded);
 
-        ByteArrayOutputStream baosDataEncrypted = new ByteArrayOutputStream();
-        for (int i = 0; i < numberOfDataBlocks; i++) {
-            try {
-                baosDataEncrypted.write(dataBlockEncryptedList.get(i));
-            } catch (IOException e) {
-                Log.e(TAG, "IOException on concatenating encrypted dataBlocks, aborted\n" +
-                        e.getMessage());
-                return false;
-            }
-        }
-        byte[] encryptedData = baosDataEncrypted.toByteArray();
-        log(methodName, printData("encryptedData", encryptedData));
-
+        // step 11
         if (testMode) {
             boolean testResult = compareTestModeValues(encryptedData, encryptedData_expected, "encryptedData");
+            ivForCommandInput = ivForCommand_expected.clone();
+        }
+
+        // step 12 CMD_HEADER (FileNumber || offset || length)
+        if (testMode) {
+            fileNumber = fileNumber_expected;
+            offset = offset_expected;
+            length = length_expected;
+        }
+        byte[] offsetBytes = intTo3ByteArrayInversed(offset);
+        byte[] lengthBytes = intTo3ByteArrayInversed(length);
+        ByteArrayOutputStream baosCmdHeader = new ByteArrayOutputStream();
+        baosCmdHeader.write(fileNumber);
+        baosCmdHeader.write(offsetBytes, 0, offsetBytes.length);
+        baosCmdHeader.write(lengthBytes, 0, lengthBytes.length);
+        byte[] cmdHeader = baosCmdHeader.toByteArray();
+        if (testMode) {
+            boolean testResult = compareTestModeValues(cmdHeader, cmdHeader_expected, "cmdHeader");
             encryptedData = encryptedData_expected.clone();
         }
 
-        // Generating the MAC for the Command APDU
-        // CmdHeader (FileNo || Offset || DataLength)
-        int fileSize = selectedFileSize;
-        int offsetBytes = 0; // read from the beginning
-        byte[] offset = Utils.intTo3ByteArrayInversed(offsetBytes); // LSB order
-        byte[] length = Utils.intTo3ByteArrayInversed(fileSize); // LSB order
-        log(methodName, printData("length", length));
-        ByteArrayOutputStream baosCmdHeader = new ByteArrayOutputStream();
-        baosCmdHeader.write(fileNumber);
-        baosCmdHeader.write(offset, 0, 3);
-        baosCmdHeader.write(length, 0, 3);
-        byte[] cmdHeader = baosCmdHeader.toByteArray();
-        log(methodName, printData("cmdHeader", cmdHeader));
-
+        // step 12
         // MAC_Input (Ins || CmdCounter || TI || CmdHeader || Encrypted CmdData )
         ByteArrayOutputStream baosMacInput = new ByteArrayOutputStream();
-        baosMacInput.write(WRITE_STANDARD_FILE_SECURE_COMMAND); // 0xAD
+        baosMacInput.write(WRITE_STANDARD_FILE_SECURE_COMMAND); // 0x8D
         baosMacInput.write(commandCounterLsb1, 0, commandCounterLsb1.length);
         baosMacInput.write(TransactionIdentifier, 0, TransactionIdentifier.length);
         baosMacInput.write(cmdHeader, 0, cmdHeader.length);
         baosMacInput.write(encryptedData, 0, encryptedData.length);
-        byte[] macInput = baosMacInput.toByteArray();
-        log(methodName, printData("macInput", macInput));
+        byte[] sendMacInput = baosMacInput.toByteArray();
+        log(methodName, printData("sendMacInput", sendMacInput));
 
         if (testMode) {
-            boolean testResult = compareTestModeValues(macInput, macInput_expected, "macInput");
-            encryptedData = encryptedData_expected.clone();
+            boolean testResult = compareTestModeValues(sendMacInput, macInput_expected, "sendMacInput");
+            sendMacInput = macInput_expected.clone();
         }
+
+        // step 13 encrypt macInput
+
+
 
         // generate the MAC (CMAC) with the SesAuthMACKey
         log(methodName, printData("SesAuthMACKey", SesAuthMACKey));
-        byte[] macFull = calculateDiverseKey(SesAuthMACKey, macInput);
+        byte[] macFull = calculateDiverseKey(SesAuthMACKey, sendMacInput);
         log(methodName, printData("macFull", macFull));
 
         if (testMode) {
