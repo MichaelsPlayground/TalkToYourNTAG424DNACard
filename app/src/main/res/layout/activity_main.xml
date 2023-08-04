@@ -524,12 +524,13 @@
                         android:text="A0 auth" />
 
                     <Button
-                        android:id="@+id/btnAuthD1AEv2"
+                        android:id="@+id/btnAuthD2AEv2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
-                        android:text="A1 auth" />
+                        android:text="A2 auth" />
 
                     <Button
                         android:id="@+id/btnAuthD3AEv2"

@@ -90,7 +90,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
 
     private Button selectApplicationEv2, getAllFileIdsEv2, getAllFileSettingsEv2, completeFileSettingsEv2;
 
-    private Button authD0AEv2, authD1AEv2, authD3AEv2, authD3ACEv2;
+    private Button authD0AEv2, authD2AEv2, authD3AEv2, authD3ACEv2;
     private Button getCardUidEv2, getFileSettingsEv2;
     private Button fileStandardCreateEv2, fileStandardWriteEv2, fileStandardReadEv2;
     private Button fileBackupCreateEv2, fileBackupWriteEv2, fileBackupReadEv2;
@@ -221,12 +221,12 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     private final byte[] APPLICATION_KEY_CAR_DES = Utils.hexStringToByteArray("D2100000000000000");
     private final byte[] APPLICATION_KEY_CAR_AES_DEFAULT = Utils.hexStringToByteArray("00000000000000000000000000000000"); // default AES key with 16 nulls
     private final byte[] APPLICATION_KEY_CAR_AES = Utils.hexStringToByteArray("A2000000000000000000000000000000");
-    private final byte APPLICATION_KEY_CAR_NUMBER = (byte) 0x02;
+    private final byte APPLICATION_KEY_CAR_NUMBER = (byte) 0x00;
     private final byte[] APPLICATION_KEY_R_DES_DEFAULT = Utils.hexStringToByteArray("0000000000000000"); // default DES key with 8 nulls
     private final byte[] APPLICATION_KEY_R_DES = Utils.hexStringToByteArray("D3100000000000000");
     private final byte[] APPLICATION_KEY_R_AES_DEFAULT = Utils.hexStringToByteArray("00000000000000000000000000000000"); // default AES key with 16 nulls
     private final byte[] APPLICATION_KEY_R_AES = Utils.hexStringToByteArray("A3000000000000000000000000000000");
-    private final byte APPLICATION_KEY_R_NUMBER = (byte) 0x03;
+    private final byte APPLICATION_KEY_R_NUMBER = (byte) 0x02;
     private final byte[] APPLICATION_KEY_W_DES_DEFAULT = Utils.hexStringToByteArray("0000000000000000"); // default DES key with 8 nulls
     private final byte[] APPLICATION_KEY_W_DES = Utils.hexStringToByteArray("D4100000000000000");
 
@@ -333,7 +333,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         completeFileSettingsEv2 = findViewById(R.id.btnCompleteFileSettingsEv2); // run all 3 commands above
 
         authD0AEv2 = findViewById(R.id.btnAuthD0AEv2);
-        authD1AEv2 = findViewById(R.id.btnAuthD1AEv2);
+        authD2AEv2 = findViewById(R.id.btnAuthD2AEv2);
         authD3AEv2 = findViewById(R.id.btnAuthD3AEv2);
         authD3ACEv2 = findViewById(R.id.btnAuthD3ACEv2);
         getCardUidEv2 = findViewById(R.id.btnGetCardUidEv2);
@@ -770,6 +770,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                     writeToUiAppend(output, printData("SES_AUTH_MAC_KEY", SES_AUTH_MAC_KEY));
                     writeToUiAppend(output, printData("TRANSACTION_IDENTIFIER", TRANSACTION_IDENTIFIER));
                     writeToUiAppend(output, "CMD_COUNTER: " + CMD_COUNTER);
+                    writeToUiAppend(output, "key used for auth: " + ntag424DnaMethods.getKeyNumberUsedForAuthentication());
                     vibrateShort();
                     // show logData
 
@@ -785,42 +786,39 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
             }
         });
 
-        authD1AEv2.setOnClickListener(new View.OnClickListener() {
+        authD2AEv2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                // authenticate with the read access key = 03...
+                // authenticate with the read access key = 02...
                 clearOutputFields();
-                String logString = "EV2 First authenticate with DEFAULT AES key number 0x01 = read & write access key";
+                String logString = "EV2 First authenticate with DEFAULT AES key number 0x02 = read access key";
                 writeToUiAppend(output, logString);
                 if (selectedApplicationId == null) {
                     writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
                     return;
                 }
 
-                // run a self test
-                boolean getSesAuthKeyTestResult = desfireAuthenticateEv2.getSesAuthKeyTest();
-                writeToUiAppend(output, "getSesAuthKeyTestResult: " + getSesAuthKeyTestResult);
-
                 byte[] responseData = new byte[2];
-                boolean success = desfireAuthenticateEv2.authenticateAesEv2First(APPLICATION_KEY_RW_NUMBER, APPLICATION_KEY_RW_AES_DEFAULT);
-                responseData = desfireAuthenticateEv2.getErrorCode();
+                boolean success = ntag424DnaMethods.authenticateAesEv2First(APPLICATION_KEY_R_NUMBER, APPLICATION_KEY_R_AES_DEFAULT);
+                responseData = ntag424DnaMethods.getErrorCode();
                 if (success) {
                     writeToUiAppend(output, logString + " SUCCESS");
                     writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    SES_AUTH_ENC_KEY = desfireAuthenticateEv2.getSesAuthENCKey();
-                    SES_AUTH_MAC_KEY = desfireAuthenticateEv2.getSesAuthMACKey();
-                    TRANSACTION_IDENTIFIER = desfireAuthenticateEv2.getTransactionIdentifier();
-                    CMD_COUNTER = desfireAuthenticateEv2.getCmdCounter();
+                    SES_AUTH_ENC_KEY = ntag424DnaMethods.getSesAuthENCKey();
+                    SES_AUTH_MAC_KEY = ntag424DnaMethods.getSesAuthMACKey();
+                    TRANSACTION_IDENTIFIER = ntag424DnaMethods.getTransactionIdentifier();
+                    CMD_COUNTER = ntag424DnaMethods.getCmdCounter();
                     writeToUiAppend(output, printData("SES_AUTH_ENC_KEY", SES_AUTH_ENC_KEY));
                     writeToUiAppend(output, printData("SES_AUTH_MAC_KEY", SES_AUTH_MAC_KEY));
                     writeToUiAppend(output, printData("TRANSACTION_IDENTIFIER", TRANSACTION_IDENTIFIER));
                     writeToUiAppend(output, "CMD_COUNTER: " + CMD_COUNTER);
+                    writeToUiAppend(output, "key used for auth: " + ntag424DnaMethods.getKeyNumberUsedForAuthentication());
                     vibrateShort();
                     // show logData
 
                     // prepare data for export
-                    exportString = desfireAuthenticateEv2.getLogData();
-                    exportStringFileName = "auth1a_ev2.html";
+                    exportString = ntag424DnaMethods.getLogData();
+                    exportStringFileName = "auth2a_ev2.html";
                     writeToUiToast("your authentication log file is ready for export");
 
                     //showDialog(MainActivity.this, desfireAuthenticateProximity.getLogData());
@@ -860,6 +858,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                     writeToUiAppend(output, printData("SES_AUTH_MAC_KEY", SES_AUTH_MAC_KEY));
                     writeToUiAppend(output, printData("TRANSACTION_IDENTIFIER", TRANSACTION_IDENTIFIER));
                     writeToUiAppend(output, "CMD_COUNTER: " + CMD_COUNTER);
+                    writeToUiAppend(output, "key used for auth: " + ntag424DnaMethods.getKeyNumberUsedForAuthentication());
                     vibrateShort();
                     // show logData
 
