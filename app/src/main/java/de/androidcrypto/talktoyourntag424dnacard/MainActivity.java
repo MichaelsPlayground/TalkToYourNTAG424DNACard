@@ -5184,9 +5184,11 @@ C1h =
     @Override
     protected void onPause() {
         super.onPause();
-        if (mNfcAdapter != null)
+        if (mNfcAdapter != null) {
             mNfcAdapter.disableReaderMode(this);
+        }
     }
+
 
     /**
      * section for layout handling

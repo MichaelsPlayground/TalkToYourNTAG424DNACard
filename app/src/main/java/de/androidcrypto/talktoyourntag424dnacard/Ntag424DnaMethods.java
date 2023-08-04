@@ -28,6 +28,10 @@ import javax.crypto.spec.SecretKeySpec;
 
 /**
  * This class is taking all methods to work with NXP NTAG 424 DNA tag
+ * The read and write communication is done using the
+ * CommunicationAdapterNtag424Dna.class as reading or writing to files
+ * 2 and 3 may need to get chunked (maximum frame size 128 byte including
+ * encryption and/or MAC overhead
  */
 
 /*
@@ -109,6 +113,12 @@ public class Ntag424DnaMethods {
     // note on TransactionIdentifier: LSB encoding
 
     /**
+     * the CommunicationAdapter is initialized on initializing this class
+     */
+
+    CommunicationAdapterNtag424Dna communicationAdapter;
+
+    /**
      * constants
      */
 
@@ -117,7 +127,7 @@ public class Ntag424DnaMethods {
     private static final byte GET_ADDITIONAL_FRAME_COMMAND = (byte) 0xAF;
     private static final byte SELECT_APPLICATION_ISO_COMMAND = (byte) 0xA4;
     private static final byte GET_FILE_SETTINGS_COMMAND = (byte) 0xF5;
-    private static final byte READ_STANDARD_FILE_COMMAND = (byte) 0xBD;
+    private static final byte READ_STANDARD_FILE_COMMAND = (byte) 0xAD; // different to DESFire !
     private static final byte READ_STANDARD_FILE_SECURE_COMMAND = (byte) 0xAD;
 
     private static final byte AUTHENTICATE_EV2_FIRST_COMMAND = (byte) 0x71;
@@ -753,17 +763,69 @@ public class Ntag424DnaMethods {
         List<byte[]> contentList = new ArrayList<>();
         byte[] content = readStandardFileFull(STANDARD_FILE_NUMBER_01_CC, 0, 32);
         contentList.add(content);
-        content  = readStandardFileFull(STANDARD_FILE_NUMBER_02, 0, 256);
+
+        //content  = readStandardFileFull(STANDARD_FILE_NUMBER_02, 0, 256);
+        content  = readStandardFilePlain(STANDARD_FILE_NUMBER_02, 0, 256);
         contentList.add(content);
         content  = readStandardFileFull(STANDARD_FILE_NUMBER_03, 0, 128);
         contentList.add(content);
         return contentList;
     }
 
-    public byte[] readStandardFile(byte fileNumber) {
+    public byte[] readStandardFilePlain(byte fileNumber, int offset, int length) {
+        String logData = "";
+        final String methodName = "readStandardFilePlain";
+        log(methodName, "started", true);
+        log(methodName, "fileNumber: " + fileNumber + " offset: " + offset + " length: " + length);
+        // sanity checks
+        if ((fileNumber < 1) || (fileNumber > 3)) {
+            log(methodName, "wrong fileNumber, aborted");
+            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            return null;
+        }
+        if ((offset < 0) || (length < 1)) {
+            log(methodName, "wrong offset or length, aborted");
+            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            return null;
+        }
+        if ((isoDep == null) || (!isoDep.isConnected())) {
+            Log.e(TAG, methodName + " lost connection to the card, aborted");
+            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            return null;
+        }
+        byte[] offsetBytes = Utils.intTo3ByteArrayInversed(offset);
+        byte[] lengthBytes = Utils.intTo3ByteArrayInversed(length);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        baos.write(fileNumber);
+        baos.write(offsetBytes, 0, offsetBytes.length);
+        baos.write(lengthBytes, 0, lengthBytes.length);
+        byte[] parameter = baos.toByteArray();
+        byte[] apdu;
+        byte[] response;
+        try {
+            apdu = wrapMessage(READ_STANDARD_FILE_COMMAND, parameter);
+            log(methodName, printData("apdu", apdu));
+            response = communicationAdapter.sendReceiveChain(apdu);
+            log(methodName, printData("response", response));
+        } catch (IOException e) {
+            Log.e(TAG, methodName + " transceive failed, IOException:\n" + e.getMessage());
+            log(methodName, "transceive failed: " + e.getMessage(), false);
+            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            return null;
+        }
+        byte[] responseBytes = returnStatusBytes(response);
+        System.arraycopy(responseBytes, 0, errorCode, 0, 2);
+        if (checkResponse(response)) {
+            Log.d(TAG, methodName + " SUCCESS, now decrypting the received data");
+            return getData(response);
+        } else {
+            Log.d(TAG, methodName + " FAILURE with error code " + Utils.bytesToHexNpeUpperCase(responseBytes));
+            Log.d(TAG, methodName + " error code: " + EV3.getErrorCode(responseBytes));
+            return null;
+        }
 
 
-        return null;
+        return response;
     }
 
     public byte[] readStandardFileFull(byte fileNumber, int offset, int length) {
@@ -1008,6 +1070,8 @@ public class Ntag424DnaMethods {
                 isoDep.close();
                 return false;
             }
+            // initialize the Communication Adapter
+            communicationAdapter = new CommunicationAdapterNtag424Dna(isoDep, printToLog);
             // get the version information
             versionInfo = getVersionInfo();
             if (versionInfo == null) {
