@@ -1058,7 +1058,7 @@ public class Ntag424DnaMethods {
         }
         */
         //int selectedFileSize = selectedFileSetting.getFileSizeInt();
-        int selectedFileSize = 32;
+        int selectedFileSize = 128; // todo change fixed value
 
         // what does happen when dataToWrite is longer than selectedFileSize ?
         // Answer: I'm trimming the data to selectedFileSize
