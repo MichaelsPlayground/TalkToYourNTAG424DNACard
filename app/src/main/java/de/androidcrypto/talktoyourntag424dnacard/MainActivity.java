@@ -2089,6 +2089,15 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 clearOutputFields();
                 String logString = "write to a standard file";
                 writeToUiAppend(output, logString);
+
+                writeToUiAppend(output, "This is using the TEST_MODE");
+
+                boolean successTest = ntag424DnaMethods.writeStandardFileFull((byte) 0x03, "123".getBytes(StandardCharsets.UTF_8), true);
+                writeToUiAppend(output, "TEST_MODE result: " + successTest);
+
+                if (!TextUtils.isEmpty(logString)) return;
+                // ending TEST
+
                 // check that a file was selected before
                 if (TextUtils.isEmpty(selectedFileId)) {
                     writeToUiAppend(output, "You need to select a file first, aborted");

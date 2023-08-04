@@ -1019,7 +1019,7 @@ public class Ntag424DnaMethods {
         byte[] mac_expected = Utils.hexStringToByteArray("426CD70CE153ED315E5B139CB97384AA");
         byte[] macTruncated_expected = Utils.hexStringToByteArray("6C0C53315B9C73AA");
         byte[] apdu_expected = Utils.hexStringToByteArray("908D00001F030000000A00006B5E6804909962FC4E3FF5522CF0F8436C0C53315B9C73AA00");
-        byte[] response_expected = Utils.hexStringToByteArray("9100C26D236E4A7C046D");
+        byte[] response_expected = Utils.hexStringToByteArray("C26D236E4A7C046D9100");
         byte[] responseMacInput_expected = Utils.hexStringToByteArray("0001007614281A");
         byte[] responseMac_expected = Utils.hexStringToByteArray("86C2486D35237F6E974A437C4004C46D");
         byte[] responseMacTruncated_expected = Utils.hexStringToByteArray("FC222E5F7A542452");
@@ -1187,6 +1187,12 @@ public class Ntag424DnaMethods {
         // now truncate the MAC
         byte[] macTruncated = truncateMAC(macFull);
         log(methodName, printData("macTruncated", macTruncated));
+        if (testMode) {
+            boolean testResult = compareTestModeValues(macTruncated, macTruncated_expected, "send macTruncated");
+            macTruncated = macTruncated_expected.clone();
+        }
+
+
 
         // error in Features and Hints, page 57, point 28:
         // Data (FileNo || Offset || DataLenght || Data) is NOT correct, as well not the Data Message
@@ -1206,7 +1212,12 @@ public class Ntag424DnaMethods {
         try {
             apdu = wrapMessage(WRITE_STANDARD_FILE_SECURE_COMMAND, writeDataCommand);
             log(methodName, printData("apdu", apdu));
-            response = isoDep.transceive(apdu);
+            if (testMode) {
+                boolean testResult = compareTestModeValues(apdu, apdu_expected, "apdu");
+                response = response_expected.clone();
+            } else {
+                response = isoDep.transceive(apdu);
+            }
             log(methodName, printData("response", response));
             //Log.d(TAG, methodName + printData(" response", response));
         } catch (IOException e) {
@@ -1279,6 +1290,18 @@ public class Ntag424DnaMethods {
         Log.d(TAG, "fullPaddedData.length: " + fullPaddedData.length);
         Log.d(TAG, "mult16               : " + mult16);
         return Arrays.copyOfRange(fullPaddedData, 0, (mult16 * 16));
+    }
+
+    private boolean compareTestModeValues(byte[] real, byte[] expected, String valueName) {
+        if (Arrays.equals(real, expected)) {
+            Log.d(TAG, "valueName: " + valueName + " EQUALS");
+            return true;
+        } else {
+            Log.d(TAG, "valueName: " + valueName + " NOT EQUALS");
+            Log.d(TAG, printData(valueName + " R", real));
+            Log.d(TAG, printData(valueName + " E", expected));
+            return false;
+        }
     }
 
     public List<Byte> getAllKeyVersions() {
@@ -1863,6 +1886,11 @@ public class Ntag424DnaMethods {
 
     private byte[] sendData(byte[] apdu) {
         String methodName = "sendData";
+        if (isoDep == null) {
+            Log.e(TAG, methodName + " isoDep is NULL");
+            log(methodName, "isoDep is NULL, aborted");
+            return null;
+        }
         log(methodName, printData("send apdu -->", apdu));
         byte[] recvBuffer;
         try {
