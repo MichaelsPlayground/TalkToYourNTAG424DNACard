@@ -1015,7 +1015,7 @@ public class Ntag424DnaMethods {
         // variables for testMode
         byte[] ivForCommand_expected = Utils.hexStringToByteArray("4C651A64261A90307B6C293F611C7F7B");
         byte[] encryptedData_expected = Utils.hexStringToByteArray("6B5E6804909962FC4E3FF5522CF0F843");
-        byte[] macInput_expected = Utils.hexStringToByteArray("8D00007614281A030000000A00006B5E6804909 962FC4E3FF5522CF0F843");
+        byte[] macInput_expected = Utils.hexStringToByteArray("8D00007614281A030000000A00006B5E6804909962FC4E3FF5522CF0F843");
         byte[] mac_expected = Utils.hexStringToByteArray("426CD70CE153ED315E5B139CB97384AA");
         byte[] macTruncated_expected = Utils.hexStringToByteArray("6C0C53315B9C73AA");
         byte[] apdu_expected = Utils.hexStringToByteArray("908D00001F030000000A00006B5E6804909962FC4E3FF5522CF0F8436C0C53315B9C73AA00");
@@ -1080,6 +1080,7 @@ public class Ntag424DnaMethods {
         List<byte[]> dataBlockList = Utils.divideArrayToList(dataPadded, 16);
 
         // Encrypting the Command Data
+
         // IV_Input (IV_Label || TI || CmdCounter || Padding)
         // MAC_Input
         byte[] commandCounterLsb1 = Utils.intTo2ByteArrayInversed(CmdCounter);
@@ -1094,12 +1095,23 @@ public class Ntag424DnaMethods {
         baosIvInput.write(padding1, 0, padding1.length);
         byte[] ivInput = baosIvInput.toByteArray();
         log(methodName, printData("ivInput", ivInput));
+        if (testMode) {
+            boolean testResult = compareTestModeValues(ivInput, ivForCommand_expected, "ivInput");
+            ivInput = ivForCommand_expected.clone();
+        }
+
 
         // IV for CmdData = Enc(KSesAuthENC, IV_Input)
         log(methodName, printData("SesAuthENCKey", SesAuthENCKey));
         byte[] startingIv = new byte[16];
         byte[] ivForCmdData = AES.encrypt(startingIv, SesAuthENCKey, ivInput);
         log(methodName, printData("ivForCmdData", ivForCmdData));
+
+        if (testMode) {
+            boolean testResult = compareTestModeValues(ivForCmdData, ivForCommand_expected, "ivForCommand");
+            ivForCmdData = ivForCommand_expected.clone();
+        }
+
 
         // data compl   22222222222222222222222222222222222222222222222222 (25 bytes)
         // data block 1 22222222222222222222222222222222 (16 bytes)
@@ -1156,6 +1168,11 @@ public class Ntag424DnaMethods {
         byte[] encryptedData = baosDataEncrypted.toByteArray();
         log(methodName, printData("encryptedData", encryptedData));
 
+        if (testMode) {
+            boolean testResult = compareTestModeValues(encryptedData, encryptedData_expected, "encryptedData");
+            encryptedData = encryptedData_expected.clone();
+        }
+
         // Generating the MAC for the Command APDU
         // CmdHeader (FileNo || Offset || DataLength)
         int fileSize = selectedFileSize;
@@ -1180,19 +1197,29 @@ public class Ntag424DnaMethods {
         byte[] macInput = baosMacInput.toByteArray();
         log(methodName, printData("macInput", macInput));
 
+        if (testMode) {
+            boolean testResult = compareTestModeValues(macInput, macInput_expected, "macInput");
+            encryptedData = encryptedData_expected.clone();
+        }
+
         // generate the MAC (CMAC) with the SesAuthMACKey
         log(methodName, printData("SesAuthMACKey", SesAuthMACKey));
         byte[] macFull = calculateDiverseKey(SesAuthMACKey, macInput);
         log(methodName, printData("macFull", macFull));
+
+        if (testMode) {
+            boolean testResult = compareTestModeValues(macFull, mac_expected, "macFull");
+            macFull = mac_expected.clone();
+        }
+
         // now truncate the MAC
         byte[] macTruncated = truncateMAC(macFull);
         log(methodName, printData("macTruncated", macTruncated));
+
         if (testMode) {
-            boolean testResult = compareTestModeValues(macTruncated, macTruncated_expected, "send macTruncated");
+            boolean testResult = compareTestModeValues(macTruncated, macTruncated_expected, "macTruncated");
             macTruncated = macTruncated_expected.clone();
         }
-
-
 
         // error in Features and Hints, page 57, point 28:
         // Data (FileNo || Offset || DataLenght || Data) is NOT correct, as well not the Data Message
