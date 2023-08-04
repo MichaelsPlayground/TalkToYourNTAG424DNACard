@@ -761,13 +761,15 @@ public class Ntag424DnaMethods {
 
     public List<byte[]> getReadAllFileContents() {
         List<byte[]> contentList = new ArrayList<>();
-        byte[] content = readStandardFileFull(STANDARD_FILE_NUMBER_01_CC, 0, 32);
+        //byte[] content = readStandardFileFull(STANDARD_FILE_NUMBER_01_CC, 0, 32);
+        byte[] content = readStandardFilePlain(STANDARD_FILE_NUMBER_01_CC, 0, 32);
         contentList.add(content);
 
         //content  = readStandardFileFull(STANDARD_FILE_NUMBER_02, 0, 256);
         content  = readStandardFilePlain(STANDARD_FILE_NUMBER_02, 0, 256);
         contentList.add(content);
         content  = readStandardFileFull(STANDARD_FILE_NUMBER_03, 0, 128);
+        //content  = readStandardFilePlain(STANDARD_FILE_NUMBER_03, 0, 128);
         contentList.add(content);
         return contentList;
     }
@@ -813,19 +815,22 @@ public class Ntag424DnaMethods {
             System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
             return null;
         }
-        byte[] responseBytes = returnStatusBytes(response);
+        byte[] responseBytes = communicationAdapter.getFullCode();
         System.arraycopy(responseBytes, 0, errorCode, 0, 2);
+        // the communicationAdapter.sendReceiveChain method return null on error
+        if (response == null) {
+            Log.d(TAG, methodName + " error code: " + EV3.getErrorCode(responseBytes));
+            log(methodName, "FAILURE with error code: " + EV3.getErrorCode(responseBytes));
+            return null;
+        }
         if (checkResponse(response)) {
-            Log.d(TAG, methodName + " SUCCESS, now decrypting the received data");
+            Log.d(TAG, methodName + " SUCCESS");
             return getData(response);
         } else {
             Log.d(TAG, methodName + " FAILURE with error code " + Utils.bytesToHexNpeUpperCase(responseBytes));
             Log.d(TAG, methodName + " error code: " + EV3.getErrorCode(responseBytes));
             return null;
         }
-
-
-        return response;
     }
 
     public byte[] readStandardFileFull(byte fileNumber, int offset, int length) {
