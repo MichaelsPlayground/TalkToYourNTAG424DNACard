@@ -1022,13 +1022,12 @@
                     android:orientation="horizontal">
 
                     <Button
-                        android:id="@+id/btnReadStandardFile3"
+                        android:id="@+id/btnCreateStandardFile"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginRight="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
-                        android:text="read 3" />
+                        android:text="create" />
 
                     <Button
                         android:id="@+id/btnWriteStandardFile"

@@ -119,7 +119,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
      * section for standard file handling
      */
 
-    private Button fileStandardCreate, fileStandardWrite, fileStandardRead;
+    private Button fileStandardWrite, fileStandardRead, fileStandardRead3;
     private com.google.android.material.textfield.TextInputEditText fileStandardFileId, fileStandardSize, fileStandardData;
     RadioButton rbFileFreeAccess, rbFileKeySecuredAccess;
 
@@ -379,8 +379,8 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         enableTransactionTimerEv2 = findViewById(R.id.btnEnableTransactionTimerEv2);
 
         // standard files
-        fileStandardCreate = findViewById(R.id.btnCreateStandardFile);
         fileStandardRead = findViewById(R.id.btnReadStandardFile);
+        fileStandardRead3 = findViewById(R.id.btnReadStandardFile3);
         fileStandardWrite = findViewById(R.id.btnWriteStandardFile);
         fileStandardFileId = findViewById(R.id.etFileStandardFileId);
         fileStandardSize = findViewById(R.id.etFileStandardSize);
@@ -2009,34 +2009,6 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
             }
         });
 
-        fileStandardCreate.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                clearOutputFields();
-                String logString = "create a new standard file";
-                writeToUiAppend(output, logString);
-                byte fileIdByte = Byte.parseByte(fileStandardFileId.getText().toString());
-                int fileSizeInt = Integer.parseInt(fileStandardSize.getText().toString());
-                // check that an application was selected before
-                if (selectedApplicationId == null) {
-                    writeToUiAppend(output, "You need to select an application first, aborted");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE", COLOR_RED);
-                    return;
-                }
-                writeToUiAppend(output, logString + " with id: " + fileStandardFileId.getText().toString() + " size: " + fileSizeInt);
-                byte[] responseData = new byte[2];
-                boolean success = createStandardFilePlainCommunicationDes(output, fileIdByte, fileSizeInt, rbFileFreeAccess.isChecked(), responseData);
-                if (success) {
-                    writeToUiAppend(output, logString + " SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    vibrateShort();
-                } else {
-                    writeToUiAppend(output, logString + " FAILURE with error " + EV3.getErrorCode(responseData));
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                }
-            }
-        });
-
         fileSelect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -2086,6 +2058,32 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                     }
                 }
             }
+        });
+
+        fileStandardRead3.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "read standard file 3";
+                writeToUiAppend(output, logString);
+
+                // check that an application was selected before
+                if (selectedApplicationId == null) {
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
+                    return;
+                }
+
+                byte[] fileContent = ntag424DnaMethods.readStandardFileFull((byte) 0x03, 0, 0);
+                if ((fileContent == null) || (fileContent.length < 1)) {
+                    writeToUiAppend(output, logString + " FAILURE");
+                    return;
+                } else {
+                        writeToUiAppend(output, "fileNumber: " + 3 + "\n" +
+                                Utils.printData("fileContent", fileContent));
+                        writeToUiAppend(output, outputDivider);
+                        vibrateShort();
+                    }
+                }
         });
 
         fileStandardWrite.setOnClickListener(new View.OnClickListener() {

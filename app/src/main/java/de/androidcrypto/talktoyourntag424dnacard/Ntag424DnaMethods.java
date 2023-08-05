@@ -7,6 +7,7 @@ import static de.androidcrypto.talktoyourntag424dnacard.Utils.printData;
 
 import android.app.Activity;
 import android.nfc.Tag;
+import android.nfc.TagLostException;
 import android.nfc.tech.IsoDep;
 import android.text.TextUtils;
 import android.util.Log;
@@ -181,8 +182,9 @@ public class Ntag424DnaMethods {
 
     /**
      * get the version information of the discovered tag
-     * @return the analyzed version information class
      *
+     * @return the analyzed version information class
+     * <p>
      * see NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf pages 27-28
      */
 
@@ -209,10 +211,9 @@ public class Ntag424DnaMethods {
 
     /**
      * selects an application on the discovered tag by application name (ISO command)
-     * @param dfApplicationName
-     * @return
      *
-     * Note: The NTAG 424 DNA has ONE pre defined application with name "D2760000850101"
+     * @param dfApplicationName
+     * @return Note: The NTAG 424 DNA has ONE pre defined application with name "D2760000850101"
      * see NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf pages 25-26
      */
 
@@ -282,10 +283,9 @@ public class Ntag424DnaMethods {
     /**
      * reads the fileSettings of a file and returns a byte array that length depends on settings on
      * Secure Dynamic Messaging (SDM) - if enabled the length is longer than 7 bytes (disabled SDM)
-     * @param fileNumber
-     * @return
      *
-     * see NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf pages 26-27
+     * @param fileNumber
+     * @return see NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf pages 26-27
      */
     private byte[] getFileSettings(byte fileNumber) {
         String logData = "";
@@ -773,9 +773,9 @@ public class Ntag424DnaMethods {
         contentList.add(content);
 
         //content  = readStandardFileFull(STANDARD_FILE_NUMBER_02, 0, 256);
-        content  = readStandardFilePlain(STANDARD_FILE_NUMBER_02, 0, 256);
+        content = readStandardFilePlain(STANDARD_FILE_NUMBER_02, 0, 256);
         contentList.add(content);
-        content  = readStandardFileFull(STANDARD_FILE_NUMBER_03, 0, 0);
+        content = readStandardFileFull(STANDARD_FILE_NUMBER_03, 0, 32);
         //content  = readStandardFilePlain(STANDARD_FILE_NUMBER_03, 0, 128);
         contentList.add(content);
         return contentList;
@@ -792,7 +792,7 @@ public class Ntag424DnaMethods {
             System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
             return null;
         }
-        if ((offset < 0) || (length < 1)) {
+        if ((offset < 0) || (length < 0)) {
             log(methodName, "wrong offset or length, aborted");
             System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
             return null;
@@ -824,7 +824,7 @@ public class Ntag424DnaMethods {
             return null;
         }
         byte[] responseBytes = returnStatusBytes(response);
-                //byte[] responseBytes = communicationAdapter.getFullCode();
+        //byte[] responseBytes = communicationAdapter.getFullCode();
         System.arraycopy(responseBytes, 0, errorCode, 0, 2);
         // the communicationAdapter.sendReceiveChain method return null on error
         /*
@@ -876,6 +876,7 @@ public class Ntag424DnaMethods {
         byte[] cmdHeader = baosCmdHeader.toByteArray();
         log(methodName, printData("cmdHeader", cmdHeader));
         // example: 00000000300000
+
         // MAC_Input
         byte[] commandCounterLsb1 = Utils.intTo2ByteArrayInversed(CmdCounter);
         log(methodName, "CmdCounter: " + CmdCounter);
@@ -961,7 +962,8 @@ public class Ntag424DnaMethods {
         log(methodName, printData("ivResponse", ivResponse));
         byte[] decryptedData = AES.decrypt(ivResponse, SesAuthENCKey, encryptedData);
         log(methodName, printData("decryptedData", decryptedData));
-        byte[] readData = Arrays.copyOfRange(decryptedData, 0, length);
+        byte[] readData = Arrays.copyOfRange(decryptedData, 0, length); // todo: if length is 0 (meaning all data) this function returns 0
+        // todo: read fileSize or known fileSize from data sheet (32/256/128)
         log(methodName, printData("readData", readData));
 
         // verifying the received MAC
@@ -988,7 +990,6 @@ public class Ntag424DnaMethods {
             return null;
         }
     }
-
 
 
     public boolean writeStandardFileFull(byte fileNumber, byte[] dataToWrite, int offset, int length, boolean testMode) {
@@ -1145,7 +1146,6 @@ public class Ntag424DnaMethods {
         // step 13 encrypt macInput
 
 
-
         // generate the MAC (CMAC) with the SesAuthMACKey
         log(methodName, printData("SesAuthMACKey", SesAuthMACKey));
         byte[] macFull = calculateDiverseKey(SesAuthMACKey, sendMacInput);
@@ -1241,6 +1241,7 @@ public class Ntag424DnaMethods {
      * add the padding bytes to data that is written to a Standard, Backup, Linear Record or Cyclic Record file
      * The encryption method does need a byte array of multiples of 16 bytes
      * If the unpaddedData is of (multiple) length of 16 the complete padding is added
+     *
      * @param unpaddedData
      * @return the padded data
      */
@@ -1450,6 +1451,7 @@ public class Ntag424DnaMethods {
 
     /**
      * generates a random byte array with equals length of key
+     *
      * @param key
      * @return
      */
@@ -1878,6 +1880,7 @@ SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ Rn
 
     /**
      * sendRequest is a one byte command without parameter
+     *
      * @param command
      * @return
      * @throws Exception
@@ -1889,6 +1892,7 @@ SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ Rn
     /**
      * sendRequest is sending a command to the PICC and depending on response code it finish or may
      * asking for more data ("code AF = additional frame available)
+     *
      * @param command
      * @param parameters
      * @return
@@ -1947,6 +1951,11 @@ SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ Rn
         byte[] recvBuffer;
         try {
             recvBuffer = isoDep.transceive(apdu);
+        } catch (TagLostException e) {
+            errorCodeReason = "TagLostException: " + e.getMessage();
+            Log.e(TAG, e.getMessage());
+            e.printStackTrace();
+            return null;
         } catch (IOException e) {
             errorCodeReason = "IOException: " + e.getMessage();
             Log.e(TAG, e.getMessage());
