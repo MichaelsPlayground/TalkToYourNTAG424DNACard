@@ -150,6 +150,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     private Button getTagVersion, formatPicc;
     private Button getKeyVersion;
 
+    private Button testGetSesAuthKeys;
     /**
      * section for visualizing DES authentication
      */
@@ -405,6 +406,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         getTagVersion = findViewById(R.id.btnGetTagVersion);
         formatPicc = findViewById(R.id.btnFormatPicc);
         getKeyVersion = findViewById(R.id.btnGetKeyVersion);
+        testGetSesAuthKeys = findViewById(R.id.btnTestGetSesAuthKeys);
 
         // visualize DES authentication
         selectApplicationDesVisualizing = findViewById(R.id.btnDesVisualizeAuthSelect);
@@ -432,6 +434,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         /**
          * just es quick test button
          */
+        /*
         Button pad = findViewById(R.id.btncardUIDxx);
         pad.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -452,6 +455,8 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 Log.d(TAG, printData("fileSettings14", fileSettings14));
             }
         });
+
+         */
 
         rbFileFreeAccess.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -2090,10 +2095,10 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 String logString = "write to a standard file";
                 writeToUiAppend(output, logString);
 
-                writeToUiAppend(output, "This is using the TEST_MODE");
+                //writeToUiAppend(output, "This is using the TEST_MODE");
 
-                boolean successTest = ntag424DnaMethods.writeStandardFileFull((byte) 0x03, "123".getBytes(StandardCharsets.UTF_8), 0, 3, true);
-                writeToUiAppend(output, "TEST_MODE result: " + successTest);
+                //boolean successTest = ntag424DnaMethods.writeStandardFileFull((byte) 0x03, "123".getBytes(StandardCharsets.UTF_8), 0, 3, true);
+                //writeToUiAppend(output, "TEST_MODE result: " + successTest);
 
                 byte[] dataToWrite = Utils.hexStringToByteArray("0102030405060708090A");
                 boolean success = ntag424DnaMethods.writeStandardFileFull((byte) 0x03, dataToWrite, 0, dataToWrite.length, false);
@@ -3228,6 +3233,22 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         .setPositiveButton(android.R.string.yes, dialogClickListener)
         .setNegativeButton(android.R.string.no, dialogClickListener)
          */
+            }
+        });
+
+        testGetSesAuthKeys.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "testGetSesAuthKeys";
+                writeToUiAppend(output, logString);
+
+                // important: Ntag424DnaMethods needs to be in TEST_MODE
+                Tag tag = null;
+                ntag424DnaMethods = new Ntag424DnaMethods(output, tag, MainActivity.this);
+                byte[] sesAuthEncKey = ntag424DnaMethods.getSesAuthEncKey(new byte[16], new byte[16], new byte[16]);
+                writeToUiAppend(output, printData("sesAuthEncKey", sesAuthEncKey));
+                writeToUiAppend(output, ntag424DnaMethods.getLogData());
             }
         });
 

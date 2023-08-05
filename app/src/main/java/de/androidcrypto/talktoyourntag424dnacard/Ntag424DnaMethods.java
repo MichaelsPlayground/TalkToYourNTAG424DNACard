@@ -84,6 +84,7 @@ number | Length | RW | CAR | R | W | Communication mode
 public class Ntag424DnaMethods {
 
     private static final String TAG = Ntag424DnaMethods.class.getName();
+    private static final boolean TEST_MODE = false;
     private Tag tag;
     private TextView textView; // used for displaying information's from the methods
     private Activity activity;
@@ -1100,7 +1101,7 @@ public class Ntag424DnaMethods {
         log(methodName, printData("cmdData ", cmdData));
         log(methodName, printData("data pad", dataPadded));
         byte[] encryptedData = AES.encrypt(ivForCmdData, SesAuthENCKey, dataPadded);
-
+        log(methodName, printData("encryptedData", encryptedData));
         // step 11
         if (testMode) {
             boolean testResult = compareTestModeValues(encryptedData, encryptedData_expected, "encryptedData");
@@ -1122,7 +1123,7 @@ public class Ntag424DnaMethods {
         byte[] cmdHeader = baosCmdHeader.toByteArray();
         if (testMode) {
             boolean testResult = compareTestModeValues(cmdHeader, cmdHeader_expected, "cmdHeader");
-            encryptedData = encryptedData_expected.clone();
+            cmdHeader = cmdHeader_expected.clone();
         }
 
         // step 12
@@ -1504,6 +1505,87 @@ public class Ntag424DnaMethods {
             log(methodName, "authenticationKey is NULL or wrong length, aborted", false);
             return null;
         }
+
+        if (TEST_MODE) {
+            writeToUiAppend(textView, "### TEST_MODE enabled ###");
+            writeToUiAppend(textView, "using pre defined values");
+            rndA = Utils.hexStringToByteArray("B98F4C50CF1C2E084FD150E33992B048");
+            rndB = Utils.hexStringToByteArray("91517975190DCEA6104948EFA3085C1B");
+            authenticationKey = Utils.hexStringToByteArray("00000000000000000000000000000000");
+        }
+        byte[] sv1_expected = Utils.hexStringToByteArray("A55A00010080B98FDD01B6693705CEA6104948EFA3085C1B4FD150E33992B048");
+        byte[] sv2_expected = Utils.hexStringToByteArray("5AA500010080B98FDD01B6693705CEA6104948EFA3085C1B4FD150E33992B048");
+        // named: Encryption Session Key
+        byte[] SesAuthENCKey_expected = Utils.hexStringToByteArray("7A93D6571E4B180FCA6AC90C9A7488D4");
+        // named CMAC Session Key
+        byte[] SesAuthMACKey_expected = Utils.hexStringToByteArray("FC4AF159B62E549B5812394CAB1918CC");
+
+/*
+SV 1 = [0xA5][0x5A][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ RndB[15:10]) ] || [RndB[9:0] || RndA[7:0]
+SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ RndB[15:10]) ] || [RndB[9:0] || RndA[7:0]
+ */
+
+
+        // see Mifare DESFire Light Features and Hints AN12343.pdf page 35
+        byte[] cmacInput = new byte[32];
+        byte[] labelEnc = new byte[]{(byte) (0xA5), (byte) (0x5A)}; // fixed to 0xA55A
+        byte[] counter = new byte[]{(byte) (0x00), (byte) (0x01)}; // fixed to 0x0001
+        byte[] length = new byte[]{(byte) (0x00), (byte) (0x80)}; // fixed to 0x0080
+
+        System.arraycopy(labelEnc, 0, cmacInput, 0, 2);
+        System.arraycopy(counter, 0, cmacInput, 2, 2);
+        System.arraycopy(length, 0, cmacInput, 4, 2);
+        System.arraycopy(rndA, 0, cmacInput, 6, 2);
+
+        byte[] rndA02to07 = new byte[6];
+        byte[] rndB00to05 = new byte[6];
+        rndA02to07 = Arrays.copyOfRange(rndA, 2, 8);
+        log(methodName, printData("rndA     ", rndA), false);
+        log(methodName, printData("rndA02to07", rndA02to07), false);
+        rndB00to05 = Arrays.copyOfRange(rndB, 0, 6);
+        log(methodName, printData("rndB     ", rndB), false);
+        log(methodName, printData("rndB00to05", rndB00to05), false);
+        byte[] xored = xor(rndA02to07, rndB00to05);
+        log(methodName, printData("xored     ", xored), false);
+        System.arraycopy(xored, 0, cmacInput, 8, 6);
+        System.arraycopy(rndB, 6, cmacInput, 14, 10);
+        System.arraycopy(rndA, 8, cmacInput, 24, 8);
+
+        log(methodName, printData("rndA     ", rndA), false);
+        log(methodName, printData("rndB     ", rndB), false);
+        log(methodName, printData("cmacInput", cmacInput), false);
+        if (TEST_MODE) {
+            boolean testResult = compareTestModeValues(cmacInput, sv1_expected, "SV1");
+        }
+        byte[] iv = new byte[16];
+        log(methodName, printData("iv       ", iv), false);
+        byte[] cmac = calculateDiverseKey(authenticationKey, cmacInput);
+        log(methodName, printData("cmacOut ", cmac), false);
+        if (TEST_MODE) {
+            boolean testResult = compareTestModeValues(cmac, SesAuthENCKey_expected, "SesAUthENCKey");
+        }
+        return cmac;
+    }
+
+    public byte[] getSesAuthEncKeyDesfire(byte[] rndA, byte[] rndB, byte[] authenticationKey) {
+        // see
+        // see MIFARE DESFire Light contactless application IC pdf, page 28
+        final String methodName = "getSesAuthEncKey";
+        log(methodName, printData("rndA", rndA) + printData(" rndB", rndB) + printData(" authenticationKey", authenticationKey), false);
+        // sanity checks
+        if ((rndA == null) || (rndA.length != 16)) {
+            log(methodName, "rndA is NULL or wrong length, aborted", false);
+            return null;
+        }
+        if ((rndB == null) || (rndB.length != 16)) {
+            log(methodName, "rndB is NULL or wrong length, aborted", false);
+            return null;
+        }
+        if ((authenticationKey == null) || (authenticationKey.length != 16)) {
+            log(methodName, "authenticationKey is NULL or wrong length, aborted", false);
+            return null;
+        }
+
         // see Mifare DESFire Light Features and Hints AN12343.pdf page 35
         byte[] cmacInput = new byte[32];
         byte[] labelEnc = new byte[]{(byte) (0xA5), (byte) (0x5A)}; // fixed to 0xA55A
