@@ -57,6 +57,7 @@ GetCardUID                         90  51 CommMode.Full
 GetFileCounters                    90  F6 CommMode.Full
 GetFileSettings                    90  F5 CommMode.Plain         implemented
 GetFileSettings                    90  F5 CommMode.MAC
+GetKeyVersion                      90  64 CommMode.Plain         implemented
 GetKeyVersion                      90  64 CommMode.MAC
 GetVersion - Part1                 90  60 CommMode.Plain         implemented
 GetVersion - Part2                 90  AF CommMode.Plain         implemented
@@ -66,11 +67,17 @@ GetVersion - Part2                 90  AF CommMode.MAC [1]
 GetVersion - Part3                 90  AF CommMode.MAC [1]
 ISOReadBinary                      00  B0 CommMode.Plain
 ReadData                           90  AD Comm. mode of targeted file
+ReadData                           90  AD CommMode.Plain         implemented
+ReadData                           90  AD CommMode.MAC
+ReadData                           90  AD CommMode.Full          implemented
 Read_Sig                           90  3C CommMode.Full
 ISOSelectFile                      00  A4 CommMode.Plain
 SetConfiguration                   90  5C CommMode.Full
 ISOUpdateBinary                    00  D6 CommMode.Plain
 WriteData                          90  8D Comm. mode of targeted file
+WriteData                          90  8D CommMode.Plain         ???
+WriteData                          90  8D CommMode.MAC
+WriteData                          90  8D CommMode.Full          implemented
  */
 
 /*
@@ -141,10 +148,10 @@ public class Ntag424DnaMethods {
      * NTAG 424 DNA specific constants
      */
 
-    private final byte[] NTAG_424_DNA_DF_APPLICATION_NAME = Utils.hexStringToByteArray("D2760000850101");
-    private static final byte STANDARD_FILE_NUMBER_01_CC = (byte) 0x01;
-    private static final byte STANDARD_FILE_NUMBER_02 = (byte) 0x02;
-    private static final byte STANDARD_FILE_NUMBER_03 = (byte) 0x03;
+    public final byte[] NTAG_424_DNA_DF_APPLICATION_NAME = Utils.hexStringToByteArray("D2760000850101");
+    public static final byte STANDARD_FILE_NUMBER_01_CC = (byte) 0x01;
+    public static final byte STANDARD_FILE_NUMBER_02 = (byte) 0x02;
+    public static final byte STANDARD_FILE_NUMBER_03 = (byte) 0x03;
 
     // Status codes
     private static final byte OPERATION_OK = (byte) 0x00;
@@ -321,12 +328,136 @@ public class Ntag424DnaMethods {
             log(methodName, methodName + " SUCCESS");
             errorCode = RESPONSE_OK.clone();
             errorCodeReason = methodName + " SUCCESS";
-            isApplicationSelected = true;
             return getData(response);
         } else {
             log(methodName, methodName + " FAILURE");
             byte[] responseBytes = returnStatusBytes(response);
             System.arraycopy(responseBytes, 0, errorCode, 0, 2);
+            errorCodeReason = methodName + " FAILURE";
+            return null;
+        }
+    }
+
+    public FileSettings[] getAllFileSettingsMac() {
+        // returns the fileSettings of all 3 pre installed files on NTAG 424 DNA
+        FileSettings[] fileSettings = new FileSettings[3];
+        /**
+         * found a strange behaviour on the getFileSettings: after a (successful) authentication the first
+         * getFileSettings command returns an 0x7e = 'length error', so in case of an error I'm trying to
+         * get the file settings a second time
+         */
+        fileSettings[0] = new FileSettings(STANDARD_FILE_NUMBER_01_CC, getFileSettingsMac(STANDARD_FILE_NUMBER_01_CC));
+        if (Arrays.equals(errorCode, RESPONSE_LENGTH_ERROR)) {
+            // this is the strange behaviour, get the fileSettings again
+            fileSettings[0] = new FileSettings(STANDARD_FILE_NUMBER_01_CC, getFileSettingsMac(STANDARD_FILE_NUMBER_01_CC));
+        }
+        fileSettings[1] = new FileSettings(STANDARD_FILE_NUMBER_02, getFileSettingsMac(STANDARD_FILE_NUMBER_02));
+        fileSettings[2] = new FileSettings(STANDARD_FILE_NUMBER_03, getFileSettingsMac(STANDARD_FILE_NUMBER_03));
+        return fileSettings;
+    }
+
+    /**
+     * reads the fileSettings of a file and returns a byte array that length depends on settings on
+     * Secure Dynamic Messaging (SDM) - if enabled the length is longer than 7 bytes (disabled SDM)
+     * This method is verifying a received MAC
+     * @param fileNumber
+     * @return see NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf pages 26-27
+     */
+    public byte[] getFileSettingsMac(byte fileNumber) {
+        String logData = "";
+
+        // status NOT working
+
+        final String methodName = "getFileSettingsMac";
+        log(methodName, "started", true);
+        log(methodName, "fileNumber: " + (int) fileNumber);
+        if (!isTagNtag424Dna) {
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "discovered tag is not a NTAG424DNA tag, aborted";
+            return null;
+        }
+        if (isoDep == null) {
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "isoDep is NULL (maybe it is not a NTAG424DNA tag ?), aborted";
+            return null;
+        }
+        if ((fileNumber < (byte) 0x01) || (fileNumber > (byte) 0x03)) {
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "fileNumber is not in range 1..3, aborted";
+            return null;
+        }
+        if ((!authenticateEv2FirstSuccess) & (!authenticateEv2NonFirstSuccess)) {
+            Log.d(TAG, "missing successful authentication with EV2First or EV2NonFirst, aborted");
+            System.arraycopy(RESPONSE_FAILURE_MISSING_AUTHENTICATION, 0, errorCode, 0, 2);
+            return null;
+        }
+
+        // MAC_Input
+        // Cmd || CmdCounter || TI || CmdHeader = fileNumber || n/a (CmdData)
+        byte[] commandCounterLsb1 = Utils.intTo2ByteArrayInversed(CmdCounter);
+        log(methodName, "CmdCounter: " + CmdCounter);
+        log(methodName, printData("commandCounterLsb1", commandCounterLsb1));
+        ByteArrayOutputStream baosMacInput = new ByteArrayOutputStream();
+        baosMacInput.write(READ_STANDARD_FILE_SECURE_COMMAND); // 0xAD
+        baosMacInput.write(commandCounterLsb1, 0, commandCounterLsb1.length);
+        baosMacInput.write(TransactionIdentifier, 0, TransactionIdentifier.length);
+        baosMacInput.write(fileNumber);
+        byte[] macInput = baosMacInput.toByteArray();
+        log(methodName, printData("macInput", macInput));
+        // example: AD0100CD73D8E500000000300000
+        // generate the MAC (CMAC) with the SesAuthMACKey
+        log(methodName, printData("SesAuthMACKey", SesAuthMACKey));
+        byte[] macFull = calculateDiverseKey(SesAuthMACKey, macInput);
+        log(methodName, printData("macFull", macFull));
+        // now truncate the MAC
+        byte[] macTruncated = truncateMAC(macFull);
+        log(methodName, printData("macTruncated", macTruncated));
+
+        // Constructing the full getFileSettings Command APDU
+        ByteArrayOutputStream baosGetFileSettingsCommand = new ByteArrayOutputStream();
+        baosGetFileSettingsCommand.write(fileNumber);
+        baosGetFileSettingsCommand.write(macTruncated, 0, macTruncated.length);
+        byte[] getFileSettingsCommand = baosGetFileSettingsCommand.toByteArray();
+        log(methodName, printData("getFileSettingsCommand", getFileSettingsCommand));
+
+        byte[] apdu = new byte[0];
+        byte[] response;
+        try {
+            apdu = wrapMessage(GET_FILE_SETTINGS_COMMAND, getFileSettingsCommand);
+            response = sendData(apdu);
+        } catch (IOException e) {
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "IOException: " + e.getMessage();
+            return null;
+        }
+        if (!checkResponse(response)) {
+            log(methodName, methodName + " FAILURE");
+            byte[] responseBytes = returnStatusBytes(response);
+            System.arraycopy(responseBytes, 0, errorCode, 0, 2);
+            errorCodeReason = methodName + " FAILURE";
+            return null;
+        }
+        // note: after sending data to the card the commandCounter is increased by 1
+        CmdCounter++;
+        log(methodName, "the CmdCounter is increased by 1 to " + CmdCounter);
+        // response length: 58 data: 8b61541d54f73901c8498c71dd45bae80578c4b1581aad439a806f37517c86ad4df8970279bbb8874ef279149aaa264c3e5eceb0e37a87699100
+
+        // the fullResponseData is xx bytes fileSettings || 8 bytes MAC
+        byte[] fullResponseData = Arrays.copyOf(response, response.length - 2);
+        int responseDataLength = fullResponseData.length - 8;
+        log(methodName, "The fullResponseData is of length " + fullResponseData.length + " that includes 8 bytes for MAC");
+        log(methodName, "The responseData length is " + responseDataLength);
+        byte[] responseData = Arrays.copyOfRange(fullResponseData, 0, responseDataLength);
+        byte[] responseMACTruncatedReceived = Arrays.copyOfRange(fullResponseData, responseDataLength, fullResponseData.length);
+        log(methodName, printData("responseData", responseData));
+        if (verifyResponseMac(responseMACTruncatedReceived, responseData)) {
+            log(methodName, methodName + " SUCCESS");
+            errorCode = RESPONSE_OK.clone();
+            errorCodeReason = methodName + " SUCCESS";
+            return responseData;
+        } else {
+            log(methodName, methodName + " FAILURE");
+            errorCode = RESPONSE_OK.clone();
             errorCodeReason = methodName + " FAILURE";
             return null;
         }
@@ -939,20 +1070,19 @@ public class Ntag424DnaMethods {
 
         // the fullEncryptedData is 56 bytes long, the first 48 bytes are encryptedData and the last 8 bytes are the responseMAC
         int encryptedDataLength = fullEncryptedData.length - 8;
-        log(methodName, "The fullEncryptedData is of length " + fullEncryptedData.length + " that includedes 8 bytes for MAC");
+        log(methodName, "The fullEncryptedData is of length " + fullEncryptedData.length + " that includes 8 bytes for MAC");
         log(methodName, "The encryptedData length is " + encryptedDataLength);
         encryptedData = Arrays.copyOfRange(fullEncryptedData, 0, encryptedDataLength);
         responseMACTruncatedReceived = Arrays.copyOfRange(fullEncryptedData, encryptedDataLength, fullEncryptedData.length);
         log(methodName, printData("encryptedData", encryptedData));
 
         // start decrypting the data
-        byte[] header = new byte[]{(byte) (0x5A), (byte) (0xA5)}; // fixed to 0x5AA5
         byte[] commandCounterLsb2 =
                 Utils.intTo2ByteArrayInversed(CmdCounter);
         byte[] padding = hexStringToByteArray("0000000000000000");
         byte[] startingIv = new byte[16];
         ByteArrayOutputStream decryptBaos = new ByteArrayOutputStream();
-        decryptBaos.write(header, 0, header.length);
+        decryptBaos.write(HEADER_ENC, 0, HEADER_ENC.length);
         decryptBaos.write(TransactionIdentifier, 0, TransactionIdentifier.length);
         decryptBaos.write(commandCounterLsb2, 0, commandCounterLsb2.length);
         decryptBaos.write(padding, 0, padding.length);
@@ -965,7 +1095,7 @@ public class Ntag424DnaMethods {
         byte[] readData = Arrays.copyOfRange(decryptedData, 0, length); // todo: if length is 0 (meaning all data) this function returns 0
         // todo: read fileSize or known fileSize from data sheet (32/256/128)
         log(methodName, printData("readData", readData));
-
+        /*
         // verifying the received MAC
         ByteArrayOutputStream responseMacBaos = new ByteArrayOutputStream();
         responseMacBaos.write((byte) 0x00); // response code 00 means success
@@ -987,6 +1117,12 @@ public class Ntag424DnaMethods {
         } else {
             Log.d(TAG, "responseMAC FAILURE");
             System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, RESPONSE_FAILURE.length);
+            return null;
+        }
+         */
+        if (verifyResponseMac(responseMACTruncatedReceived, encryptedData)) {
+            return readData;
+        } else {
             return null;
         }
     }
@@ -1064,7 +1200,6 @@ public class Ntag424DnaMethods {
         byte[] commandCounterLsb1 = Utils.intTo2ByteArrayInversed(CmdCounter);
         log(methodName, "CmdCounter: " + CmdCounter);
         log(methodName, printData("commandCounterLsb1", commandCounterLsb1));
-        //byte[] header = new byte[]{(byte) (0xA5), (byte) (0x5A)}; // fixed to 0xA55A
         byte[] padding1 = hexStringToByteArray("0000000000000000"); // 8 bytes
         ByteArrayOutputStream baosIvInput = new ByteArrayOutputStream();
         baosIvInput.write(HEADER_MAC, 0, HEADER_MAC.length);
@@ -1212,6 +1347,8 @@ public class Ntag424DnaMethods {
         log(methodName, "the CmdCounter is increased by 1 to " + CmdCounter);
         byte[] commandCounterLsb2 = Utils.intTo2ByteArrayInversed(CmdCounter);
 
+        responseMACTruncatedReceived = Arrays.copyOf(response, response.length - 2);
+        /*
         // verifying the received Response MAC
         ByteArrayOutputStream responseMacBaos = new ByteArrayOutputStream();
         responseMacBaos.write((byte) 0x00); // response code 00 means success
@@ -1219,7 +1356,7 @@ public class Ntag424DnaMethods {
         responseMacBaos.write(TransactionIdentifier, 0, TransactionIdentifier.length);
         byte[] macInput2 = responseMacBaos.toByteArray();
         log(methodName, printData("macInput2", macInput2));
-        responseMACTruncatedReceived = Arrays.copyOf(response, response.length - 2);
+
         byte[] responseMACCalculated = calculateDiverseKey(SesAuthMACKey, macInput2);
         log(methodName, printData("responseMACCalculated", responseMACCalculated));
         byte[] responseMACTruncatedCalculated = truncateMAC(responseMACCalculated);
@@ -1233,6 +1370,12 @@ public class Ntag424DnaMethods {
         } else {
             Log.d(TAG, "responseMAC FAILURE");
             System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, RESPONSE_FAILURE.length);
+            return false;
+        }
+         */
+        if (verifyResponseMac(responseMACTruncatedReceived, null)) {
+            return true;
+        } else {
             return false;
         }
     }
@@ -1530,11 +1673,10 @@ SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ Rn
 
         // see Mifare DESFire Light Features and Hints AN12343.pdf page 35
         byte[] cmacInput = new byte[32];
-        byte[] labelEnc = new byte[]{(byte) (0xA5), (byte) (0x5A)}; // fixed to 0xA55A
         byte[] counter = new byte[]{(byte) (0x00), (byte) (0x01)}; // fixed to 0x0001
         byte[] length = new byte[]{(byte) (0x00), (byte) (0x80)}; // fixed to 0x0080
 
-        System.arraycopy(labelEnc, 0, cmacInput, 0, 2);
+        System.arraycopy(HEADER_MAC, 0, cmacInput, 0, 2);
         System.arraycopy(counter, 0, cmacInput, 2, 2);
         System.arraycopy(length, 0, cmacInput, 4, 2);
         System.arraycopy(rndA, 0, cmacInput, 6, 2);
@@ -1590,11 +1732,10 @@ SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ Rn
 
         // see Mifare DESFire Light Features and Hints AN12343.pdf page 35
         byte[] cmacInput = new byte[32];
-        byte[] labelEnc = new byte[]{(byte) (0xA5), (byte) (0x5A)}; // fixed to 0xA55A
         byte[] counter = new byte[]{(byte) (0x00), (byte) (0x01)}; // fixed to 0x0001
         byte[] length = new byte[]{(byte) (0x00), (byte) (0x80)}; // fixed to 0x0080
 
-        System.arraycopy(labelEnc, 0, cmacInput, 0, 2);
+        System.arraycopy(HEADER_MAC, 0, cmacInput, 0, 2);
         System.arraycopy(counter, 0, cmacInput, 2, 2);
         System.arraycopy(length, 0, cmacInput, 4, 2);
         System.arraycopy(rndA, 0, cmacInput, 6, 2);
@@ -1655,11 +1796,10 @@ SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ Rn
         }
         // see Mifare DESFire Light Features and Hints AN12343.pdf page 35
         byte[] cmacInput = new byte[32];
-        byte[] labelEnc = new byte[]{(byte) (0x5A), (byte) (0xA5)}; // fixed to 0x5AA5
         byte[] counter = new byte[]{(byte) (0x00), (byte) (0x01)}; // fixed to 0x0001
         byte[] length = new byte[]{(byte) (0x00), (byte) (0x80)}; // fixed to 0x0080
 
-        System.arraycopy(labelEnc, 0, cmacInput, 0, 2);
+        System.arraycopy(HEADER_ENC, 0, cmacInput, 0, 2);
         System.arraycopy(counter, 0, cmacInput, 2, 2);
         System.arraycopy(length, 0, cmacInput, 4, 2);
         System.arraycopy(rndA, 0, cmacInput, 6, 2);
@@ -1751,6 +1891,43 @@ SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ Rn
         return mac.doFinal();
     }
 
+    /**
+     * verifies the responseMAC against the responseData using the SesAuthMACKey
+     * @param responseMAC
+     * @param responseData (if data is encrypted use the encrypted data, not the decrypted data)
+     *                     Note: in case of enciphered writings the data is null
+     * @return true if MAC equals the calculated MAC
+     */
+
+    private boolean verifyResponseMac(byte[] responseMAC, byte[] responseData) {
+        final String methodName = "verifyResponseMac";
+        byte[] commandCounterLsb = Utils.intTo2ByteArrayInversed(CmdCounter);
+        ByteArrayOutputStream responseMacBaos = new ByteArrayOutputStream();
+        responseMacBaos.write((byte) 0x00); // response code 00 means success
+        responseMacBaos.write(commandCounterLsb, 0, commandCounterLsb.length);
+        responseMacBaos.write(TransactionIdentifier, 0, TransactionIdentifier.length);
+        if (responseData != null) {
+            responseMacBaos.write(responseData, 0, responseData.length);
+        }
+        byte[] macInput = responseMacBaos.toByteArray();
+        log(methodName, printData("macInput", macInput));
+        byte[] responseMACCalculated = calculateDiverseKey(SesAuthMACKey, macInput);
+        log(methodName, printData("responseMACTruncatedReceived  ", responseMAC));
+        log(methodName, printData("responseMACCalculated", responseMACCalculated));
+        byte[] responseMACTruncatedCalculated = truncateMAC(responseMACCalculated);
+        log(methodName, printData("responseMACTruncatedCalculated", responseMACTruncatedCalculated));
+        // compare the responseMAC's
+        if (Arrays.equals(responseMACTruncatedCalculated, responseMAC)) {
+            Log.d(TAG, "responseMAC SUCCESS");
+            System.arraycopy(RESPONSE_OK, 0, errorCode, 0, RESPONSE_OK.length);
+            return true;
+        } else {
+            Log.d(TAG, "responseMAC FAILURE");
+            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, RESPONSE_FAILURE.length);
+            return false;
+        }
+    }
+
     private byte[] truncateMAC(byte[] fullMAC) {
         final String methodName = "truncateMAC";
         log(methodName, printData("fullMAC", fullMAC), true);
@@ -1831,6 +2008,7 @@ SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ Rn
 
     private boolean checkResponseIso(@NonNull byte[] data) {
         // simple sanity check
+        if (data == null) return false;
         if (data.length < 2) {
             return false;
         } // not ok

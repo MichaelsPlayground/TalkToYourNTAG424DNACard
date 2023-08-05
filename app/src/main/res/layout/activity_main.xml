@@ -180,38 +180,6 @@
                     android:textSize="16sp"
                     android:textStyle="bold" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:visibility="gone"
-                    android:orientation="horizontal">
-
-                    <Button
-                        android:id="@+id/btnXXXSelectApplication"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginRight="8dp"
-                        android:layout_weight="1"
-                        android:text="xxx select" />
-
-                    <Button
-                        android:id="@+id/btnListApplications"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginLeft="8dp"
-                        android:layout_weight="1"
-                        android:text="list" />
-
-                    <Button
-                        android:id="@+id/btnDeleteApplication"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginLeft="8dp"
-                        android:layout_weight="1"
-                        android:text="delete" />
-
-                </LinearLayout>
-
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/etApplicationIdLayout"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -284,20 +252,20 @@
                         android:text="select" />
 
                     <Button
-                        android:id="@+id/btnCreateApplication"
+                        android:id="@+id/btnxx1"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
                         android:layout_weight="1"
-                        android:text="create" />
+                        android:text="xx" />
 
                     <Button
-                        android:id="@+id/btnCreateApplicationAes"
+                        android:id="@+id/btnxx2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
                         android:layout_weight="1"
-                        android:text="cr AES" />
+                        android:text="xx" />
 
                 </LinearLayout>
 
@@ -412,12 +380,12 @@
                         android:text="chg file sett" />
 
                     <Button
-                        android:id="@+id/btnDeleteFile"
+                        android:id="@+id/btnGetFileSettingsMac"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
                         android:layout_weight="1"
-                        android:text="delete" />
+                        android:text="fs MAC" />
 
                 </LinearLayout>
 
@@ -635,162 +603,6 @@
                 </LinearLayout>
 
                 <TextView
-                    android:id="@+id/tv11Ev2"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="10dp"
-                    android:text="work with Backup files"
-                    android:textAlignment="center"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:orientation="horizontal">
-
-                    <Button
-                        android:id="@+id/btnCreateBackupFileEv2"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginRight="8dp"
-                        android:layout_weight="1"
-                        android:enabled="false"
-                        android:text="Cr Back 5" />
-
-                    <Button
-                        android:id="@+id/btnWriteBackupFileEv2"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginLeft="8dp"
-                        android:layout_weight="1"
-                        android:text="Wr Back 5" />
-
-                    <Button
-                        android:id="@+id/btnReadBackupFileEv2"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginLeft="8dp"
-                        android:layout_weight="1"
-                        android:text="Rd Back 5" />
-
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/tv5Ev2"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="10dp"
-                    android:text="work with Value files"
-                    android:textAlignment="center"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:orientation="horizontal">
-
-                    <Button
-                        android:id="@+id/btnCreditValueFileEv2"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginRight="8dp"
-                        android:layout_weight="1"
-                        android:text="Credit 8" />
-
-                    <Button
-                        android:id="@+id/btnDebitValueFileEv2"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginLeft="8dp"
-                        android:layout_weight="1"
-                        android:text="Debit 8" />
-
-                    <Button
-                        android:id="@+id/btnReadValueFileEv2"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginLeft="8dp"
-                        android:layout_weight="1"
-                        android:text="Read 8" />
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:orientation="horizontal">
-
-                    <Button
-                        android:id="@+id/btnSetConfigurationValueFileEv2"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginRight="8dp"
-                        android:layout_weight="1"
-                        android:text="setConf 8" />
-
-                    <Button
-                        android:id="@+id/btnDeleteValueFileEv2"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginLeft="8dp"
-                        android:layout_weight="1"
-                        android:text="Del 8" />
-
-                    <Button
-                        android:id="@+id/btnxxValueFileEv2"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginLeft="8dp"
-                        android:layout_weight="1"
-                        android:text="xx" />
-
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/tv4Ev2"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="10dp"
-                    android:text="work with (Cyclic) Record files"
-                    android:textAlignment="center"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:orientation="horizontal">
-
-                    <Button
-                        android:id="@+id/btnCreateRecordFileEv2"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginRight="8dp"
-                        android:layout_weight="1"
-                        android:enabled="false"
-                        android:text="Cr CyRec 14" />
-
-                    <Button
-                        android:id="@+id/btnWriteRecordFileEv2"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginLeft="8dp"
-                        android:layout_weight="1"
-                        android:text="Wr CyRec 14" />
-
-                    <Button
-                        android:id="@+id/btnReadRecordFileEv2"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginLeft="8dp"
-                        android:layout_weight="1"
-                        android:text="Rd CyRec 14" />
-
-                </LinearLayout>
-
-                <TextView
                     android:id="@+id/tv2Ev2"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -831,47 +643,6 @@
                         android:layout_weight="1"
                         android:enabled="true"
                         android:text="CR FS enciph" />
-
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/tv3Ev2"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="10dp"
-                    android:text="Transaction MAC file"
-                    android:textAlignment="center"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:orientation="horizontal">
-
-                    <Button
-                        android:id="@+id/btnCreateTransactionMacFileEv2"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginRight="8dp"
-                        android:layout_weight="1"
-                        android:text="Cr TMAC" />
-
-                    <Button
-                        android:id="@+id/btnDeleteTransactionMacFileEv2"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginLeft="8dp"
-                        android:layout_weight="1"
-                        android:text="Del TMAC" />
-
-                    <Button
-                        android:id="@+id/btnCompleteTransactionMacFileEv2"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginLeft="8dp"
-                        android:layout_weight="1"
-                        android:text="TMAC complete" />
 
                 </LinearLayout>
 
