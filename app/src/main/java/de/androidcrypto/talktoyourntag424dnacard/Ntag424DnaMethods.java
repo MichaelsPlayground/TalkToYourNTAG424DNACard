@@ -93,6 +93,7 @@ public class Ntag424DnaMethods {
 
     private static final String TAG = Ntag424DnaMethods.class.getName();
     private static final boolean TEST_MODE = false;
+
     private Tag tag;
     private TextView textView; // used for displaying information's from the methods
     private Activity activity;
@@ -133,6 +134,7 @@ public class Ntag424DnaMethods {
      * constants
      */
 
+    private static final byte CHANGE_KEY_SECURE_COMMAND = (byte) 0xC4;
     private static final byte GET_VERSION_INFO_COMMAND = (byte) 0x60;
     private static final byte GET_KEY_VERSION_COMMAND = (byte) 0x64;
     private static final byte GET_ADDITIONAL_FRAME_COMMAND = (byte) 0xAF;
@@ -149,7 +151,7 @@ public class Ntag424DnaMethods {
      */
 
     public final byte[] NTAG_424_DNA_DF_APPLICATION_NAME = Utils.hexStringToByteArray("D2760000850101");
-    public static final byte STANDARD_FILE_NUMBER_01_CC = (byte) 0x01;
+    public static final byte STANDARD_FILE_NUMBER_01 = (byte) 0x01;
     public static final byte STANDARD_FILE_NUMBER_02 = (byte) 0x02;
     public static final byte STANDARD_FILE_NUMBER_03 = (byte) 0x03;
 
@@ -163,6 +165,7 @@ public class Ntag424DnaMethods {
     private static final byte[] RESPONSE_ISO_OK = new byte[]{(byte) 0x90, (byte) 0x00};
     private static final byte[] RESPONSE_MORE_DATA_AVAILABLE = new byte[]{(byte) 0x91, (byte) 0xAF};
     private static final byte[] RESPONSE_LENGTH_ERROR = new byte[]{(byte) 0x91, (byte) 0x7E};
+    private static final byte[] RESPONSE_PARAMETER_ERROR = new byte[]{(byte) 0x91, (byte) 0xFE}; // failure because of wrong parameter
     private static final byte[] RESPONSE_FAILURE = new byte[]{(byte) 0x91, (byte) 0xFF}; // general, undefined failure
 
 
@@ -240,7 +243,7 @@ public class Ntag424DnaMethods {
             return false;
         }
         if (dfApplicationName == null) {
-            errorCode = RESPONSE_FAILURE.clone();
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
             errorCodeReason = "dfApplicationName is NULL, aborted";
             return false;
         }
@@ -277,10 +280,10 @@ public class Ntag424DnaMethods {
          * getFileSettings command returns an 0x7e = 'length error', so in case of an error I'm trying to
          * get the file settings a second time
          */
-        fileSettings[0] = new FileSettings(STANDARD_FILE_NUMBER_01_CC, getFileSettings(STANDARD_FILE_NUMBER_01_CC));
+        fileSettings[0] = new FileSettings(STANDARD_FILE_NUMBER_01, getFileSettings(STANDARD_FILE_NUMBER_01));
         if (Arrays.equals(errorCode, RESPONSE_LENGTH_ERROR)) {
             // this is the strange behaviour, get the fileSettings again
-            fileSettings[0] = new FileSettings(STANDARD_FILE_NUMBER_01_CC, getFileSettings(STANDARD_FILE_NUMBER_01_CC));
+            fileSettings[0] = new FileSettings(STANDARD_FILE_NUMBER_01, getFileSettings(STANDARD_FILE_NUMBER_01));
         }
         fileSettings[1] = new FileSettings(STANDARD_FILE_NUMBER_02, getFileSettings(STANDARD_FILE_NUMBER_02));
         fileSettings[2] = new FileSettings(STANDARD_FILE_NUMBER_03, getFileSettings(STANDARD_FILE_NUMBER_03));
@@ -310,7 +313,7 @@ public class Ntag424DnaMethods {
             return null;
         }
         if ((fileNumber < (byte) 0x01) || (fileNumber > (byte) 0x03)) {
-            errorCode = RESPONSE_FAILURE.clone();
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
             errorCodeReason = "fileNumber not in range 1..3, aborted";
             return null;
         }
@@ -346,10 +349,10 @@ public class Ntag424DnaMethods {
          * getFileSettings command returns an 0x7e = 'length error', so in case of an error I'm trying to
          * get the file settings a second time
          */
-        fileSettings[0] = new FileSettings(STANDARD_FILE_NUMBER_01_CC, getFileSettingsMac(STANDARD_FILE_NUMBER_01_CC));
+        fileSettings[0] = new FileSettings(STANDARD_FILE_NUMBER_01, getFileSettingsMac(STANDARD_FILE_NUMBER_01));
         if (Arrays.equals(errorCode, RESPONSE_LENGTH_ERROR)) {
             // this is the strange behaviour, get the fileSettings again
-            fileSettings[0] = new FileSettings(STANDARD_FILE_NUMBER_01_CC, getFileSettingsMac(STANDARD_FILE_NUMBER_01_CC));
+            fileSettings[0] = new FileSettings(STANDARD_FILE_NUMBER_01, getFileSettingsMac(STANDARD_FILE_NUMBER_01));
         }
         fileSettings[1] = new FileSettings(STANDARD_FILE_NUMBER_02, getFileSettingsMac(STANDARD_FILE_NUMBER_02));
         fileSettings[2] = new FileSettings(STANDARD_FILE_NUMBER_03, getFileSettingsMac(STANDARD_FILE_NUMBER_03));
@@ -382,7 +385,7 @@ public class Ntag424DnaMethods {
             return null;
         }
         if ((fileNumber < (byte) 0x01) || (fileNumber > (byte) 0x03)) {
-            errorCode = RESPONSE_FAILURE.clone();
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
             errorCodeReason = "fileNumber is not in range 1..3, aborted";
             return null;
         }
@@ -498,23 +501,23 @@ public class Ntag424DnaMethods {
         errorCode = new byte[2];
         // sanity checks
         if (keyNo < 0) {
-            Log.e(TAG, methodName + " keyNumber is < 0, aborted");
-            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "keyNumber is < 0, aborted";
             return false;
         }
-        if (keyNo > 14) {
-            Log.e(TAG, methodName + " keyNumber is > 14, aborted");
-            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+        if (keyNo > 4) {
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "keyNumber is > 4, aborted";
             return false;
         }
         if ((key == null) || (key.length != 16)) {
-            Log.e(TAG, methodName + " data length is not 16, aborted");
-            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "key length is not 16, aborted";
             return false;
         }
         if ((isoDep == null) || (!isoDep.isConnected())) {
-            Log.e(TAG, methodName + " lost connection to the card, aborted");
-            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "isoDep is NULL (maybe it is not a NTAG424DNA tag ?), aborted";
             return false;
         }
         log(methodName, "step 01 get encrypted rndB from card");
@@ -534,7 +537,6 @@ public class Ntag424DnaMethods {
             log(methodName, printData("parameter", parameter));
             apdu = wrapMessage(AUTHENTICATE_EV2_FIRST_COMMAND, parameter);
             log(methodName, "get enc rndB " + printData("apdu", apdu));
-            //response = isoDep.transceive(apdu);
             response = sendData(apdu);
             log(methodName, "get enc rndB " + printData("response", response));
         } catch (IOException e) {
@@ -593,7 +595,6 @@ public class Ntag424DnaMethods {
         try {
             apdu = wrapMessage(GET_ADDITIONAL_FRAME_COMMAND, rndArndB_leftRotated_enc);
             log(methodName, "send rndArndB_leftRotated_enc " + printData("apdu", apdu));
-            //response = isoDep.transceive(apdu);
             response = sendData(apdu);
             log(methodName, "send rndArndB_leftRotated_enc " + printData("response", response));
         } catch (IOException e) {
@@ -681,6 +682,8 @@ public class Ntag424DnaMethods {
         } else {
             log(methodName, "****   FAILURE   ****");
             invalidateAllData();
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "Authentication Error - did you use the wrong key ?";
         }
         log(methodName, "*********************");
         return rndAEqual;
@@ -726,29 +729,28 @@ public class Ntag424DnaMethods {
         errorCode = new byte[2];
         // sanity checks
         if (!authenticateEv2FirstSuccess) {
-            Log.e(TAG, methodName + " please run an authenticateEV2First before, aborted");
-            log(methodName, "missing previous successfull authenticateEv2First, aborted");
-            System.arraycopy(RESPONSE_FAILURE_MISSING_AUTHENTICATION, 0, errorCode, 0, 2);
+            errorCode = RESPONSE_FAILURE_MISSING_AUTHENTICATION.clone();
+            errorCodeReason = "missing previous successful authenticateEv2First, aborted";
             return false;
         }
         if (keyNo < 0) {
-            Log.e(TAG, methodName + " keyNumber is < 0, aborted");
-            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "keyNumber is < 0, aborted";
             return false;
         }
-        if (keyNo > 14) {
-            Log.e(TAG, methodName + " keyNumber is > 14, aborted");
-            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+        if (keyNo > 4) {
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "keyNumber is > 4, aborted";
             return false;
         }
         if ((key == null) || (key.length != 16)) {
-            Log.e(TAG, methodName + " data length is not 16, aborted");
-            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "key length is not 16, aborted";
             return false;
         }
         if ((isoDep == null) || (!isoDep.isConnected())) {
-            Log.e(TAG, methodName + " lost connection to the card, aborted");
-            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "isoDep is NULL (maybe it is not a NTAG424DNA tag ?), aborted";
             return false;
         }
         log(methodName, "step 01 get encrypted rndB from card");
@@ -766,7 +768,7 @@ public class Ntag424DnaMethods {
             log(methodName, printData("parameter", parameter));
             apdu = wrapMessage(AUTHENTICATE_EV2_NON_FIRST_COMMAND, parameter);
             log(methodName, "get enc rndB " + printData("apdu", apdu));
-            response = isoDep.transceive(apdu);
+            response = sendData(apdu);
             log(methodName, "get enc rndB " + printData("response", response));
         } catch (IOException e) {
             Log.e(TAG, methodName + " transceive failed, IOException:\n" + e.getMessage());
@@ -824,7 +826,7 @@ public class Ntag424DnaMethods {
         try {
             apdu = wrapMessage(GET_ADDITIONAL_FRAME_COMMAND, rndArndB_leftRotated_enc);
             log(methodName, "send rndArndB_leftRotated_enc " + printData("apdu", apdu));
-            response = isoDep.transceive(apdu);
+            response = sendData(apdu);
             log(methodName, "send rndArndB_leftRotated_enc " + printData("response", response));
         } catch (IOException e) {
             Log.e(TAG, methodName + " transceive failed, IOException:\n" + e.getMessage());
@@ -892,6 +894,8 @@ public class Ntag424DnaMethods {
         } else {
             log(methodName, "****   FAILURE   ****");
             invalidateAllData();
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "Authentication Error - did you use the wrong key ?";
         }
         log(methodName, "*********************");
         return rndAEqual;
@@ -899,8 +903,8 @@ public class Ntag424DnaMethods {
 
     public List<byte[]> getReadAllFileContents() {
         List<byte[]> contentList = new ArrayList<>();
-        //byte[] content = readStandardFileFull(STANDARD_FILE_NUMBER_01_CC, 0, 32);
-        byte[] content = readStandardFilePlain(STANDARD_FILE_NUMBER_01_CC, 0, 32);
+        //byte[] content = readStandardFileFull(STANDARD_FILE_NUMBER_01, 0, 32);
+        byte[] content = readStandardFilePlain(STANDARD_FILE_NUMBER_01, 0, 32);
         contentList.add(content);
 
         //content  = readStandardFileFull(STANDARD_FILE_NUMBER_02, 0, 256);
@@ -919,18 +923,18 @@ public class Ntag424DnaMethods {
         log(methodName, "fileNumber: " + fileNumber + " offset: " + offset + " length: " + length);
         // sanity checks
         if ((fileNumber < 1) || (fileNumber > 3)) {
-            log(methodName, "wrong fileNumber, aborted");
-            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "wrong fileNumber, aborted";
             return null;
         }
         if ((offset < 0) || (length < 0)) {
-            log(methodName, "wrong offset or length, aborted");
-            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "wrong offset or length, aborted";
             return null;
         }
         if ((isoDep == null) || (!isoDep.isConnected())) {
-            Log.e(TAG, methodName + " lost connection to the card, aborted");
-            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "isoDep is NULL (maybe it is not a NTAG424DNA tag ?), aborted";
             return null;
         }
         byte[] offsetBytes = Utils.intTo3ByteArrayInversed(offset);
@@ -987,17 +991,26 @@ public class Ntag424DnaMethods {
         log(methodName, "started", true);
         log(methodName, "fileNumber: " + fileNumber + " offset: " + offset + " length: " + length);
         // sanity checks
-        if ((!authenticateEv2FirstSuccess) & (!authenticateEv2NonFirstSuccess)) {
-            Log.d(TAG, "missing successful authentication with EV2First or EV2NonFirst, aborted");
-            System.arraycopy(RESPONSE_FAILURE_MISSING_AUTHENTICATION, 0, errorCode, 0, 2);
+        if ((fileNumber < 1) || (fileNumber > 3)) {
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "wrong fileNumber, aborted";
+            return null;
+        }
+        if ((offset < 0) || (length < 0)) {
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "wrong offset or length, aborted";
             return null;
         }
         if ((isoDep == null) || (!isoDep.isConnected())) {
-            Log.e(TAG, methodName + " lost connection to the card, aborted");
-            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "isoDep is NULL (maybe it is not a NTAG424DNA tag ?), aborted";
             return null;
         }
-
+        if ((!authenticateEv2FirstSuccess) & (!authenticateEv2NonFirstSuccess)) {
+            errorCode = RESPONSE_FAILURE_MISSING_AUTHENTICATION.clone();
+            errorCodeReason = "missing successful authentication with EV2First or EV2NonFirst, aborted";
+            return null;
+        }
         byte[] offsetBytes = Utils.intTo3ByteArrayInversed(offset); // LSB order
         byte[] lengthBytes = Utils.intTo3ByteArrayInversed(length); // LSB order
         ByteArrayOutputStream baosCmdHeader = new ByteArrayOutputStream();
@@ -1095,31 +1108,7 @@ public class Ntag424DnaMethods {
         byte[] readData = Arrays.copyOfRange(decryptedData, 0, length); // todo: if length is 0 (meaning all data) this function returns 0
         // todo: read fileSize or known fileSize from data sheet (32/256/128)
         log(methodName, printData("readData", readData));
-        /*
         // verifying the received MAC
-        ByteArrayOutputStream responseMacBaos = new ByteArrayOutputStream();
-        responseMacBaos.write((byte) 0x00); // response code 00 means success
-        responseMacBaos.write(commandCounterLsb2, 0, commandCounterLsb2.length);
-        responseMacBaos.write(TransactionIdentifier, 0, TransactionIdentifier.length);
-        responseMacBaos.write(encryptedData, 0, encryptedData.length);
-        byte[] macInput2 = responseMacBaos.toByteArray();
-        log(methodName, printData("macInput", macInput2));
-        byte[] responseMACCalculated = calculateDiverseKey(SesAuthMACKey, macInput2);
-        log(methodName, printData("responseMACTruncatedReceived  ", responseMACTruncatedReceived));
-        log(methodName, printData("responseMACCalculated", responseMACCalculated));
-        byte[] responseMACTruncatedCalculated = truncateMAC(responseMACCalculated);
-        log(methodName, printData("responseMACTruncatedCalculated", responseMACTruncatedCalculated));
-        // compare the responseMAC's
-        if (Arrays.equals(responseMACTruncatedCalculated, responseMACTruncatedReceived)) {
-            Log.d(TAG, "responseMAC SUCCESS");
-            System.arraycopy(RESPONSE_OK, 0, errorCode, 0, RESPONSE_OK.length);
-            return readData;
-        } else {
-            Log.d(TAG, "responseMAC FAILURE");
-            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, RESPONSE_FAILURE.length);
-            return null;
-        }
-         */
         if (verifyResponseMac(responseMACTruncatedReceived, encryptedData)) {
             return readData;
         } else {
@@ -1127,6 +1116,74 @@ public class Ntag424DnaMethods {
         }
     }
 
+    public boolean writeStandardFilePlain(byte fileNumber, byte[] dataToWrite, int offset, int length) {
+        String logData = "";
+        final String methodName = "writeStandardFilePlain";
+        log(methodName, "started", true);
+        log(methodName, "fileNumber: " + fileNumber);
+        log(methodName, printData("dataToWrite", dataToWrite));
+        
+        // sanity checks
+        if ((fileNumber < (byte) 0x01) || (fileNumber > (byte) 0x03)) {
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "fileNumber is not in range 1..3, aborted";
+            return false;
+        }
+        if ((dataToWrite == null) || (dataToWrite.length < 1)) {
+            Log.e(TAG, methodName + " dataToWrite is NULL or of length 0, aborted");
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "dataToWrite is NULL or of length 0, aborted";
+            return false;
+        }
+        if ((isoDep == null) || (!isoDep.isConnected())) {
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "lost connection to the card, aborted";
+            return false;
+        }
+        // generate the parameter
+        byte[] offsetBytes = Utils.intTo3ByteArrayInversed(offset); // LSB order
+        byte[] lengthBytes = Utils.intTo3ByteArrayInversed(length); // LSB order
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        baos.write(fileNumber);
+        baos.write(offsetBytes, 0, offsetBytes.length);
+        baos.write(lengthBytes, 0, lengthBytes.length);
+        baos.write(dataToWrite, 0, dataToWrite.length);
+        byte[] parameter = baos.toByteArray();
+        Log.d(TAG, methodName + printData(" parameter", parameter));
+        byte[] response = new byte[0];
+        byte[] apdu = new byte[0];
+        try {
+            apdu = wrapMessage(WRITE_STANDARD_FILE_SECURE_COMMAND, parameter);
+            // sample:  903d00002700000000200000323032332e30372e32312031373a30343a30342031323334353637383930313200 (45 bytes)
+            response = sendData(apdu);
+        } catch (IOException e) {
+            Log.e(TAG, methodName + " transceive failed, IOException:\n" + e.getMessage());
+            log(methodName, "transceive failed: " + e.getMessage(), false);
+            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            return false;
+        }
+        byte[] responseBytes = returnStatusBytes(response);
+        System.arraycopy(responseBytes, 0, errorCode, 0, 2);
+        if (checkResponse(response)) {
+            Log.d(TAG, methodName + " SUCCESS");
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * writes data to a Standard file in CommunicationMode.Full
+     * Important: you need a preceding authenticateEv2First call using the read&write or write access key rights
+     * and successful authenticate
+     * @param fileNumber
+     * @param dataToWrite
+     * @param offset
+     * @param length
+     * @param testMode on 'true' there is no transmission but only compairing step results with 
+     *                 NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf
+     * @return true on success
+     */
 
     public boolean writeStandardFileFull(byte fileNumber, byte[] dataToWrite, int offset, int length, boolean testMode) {
         // see Mifare DESFire Light Features and Hints AN12343.pdf pages 55 - 58
@@ -1150,7 +1207,7 @@ public class Ntag424DnaMethods {
          */
 
         String logData = "";
-        final String methodName = "writeStandardFileEv2";
+        final String methodName = "writeStandardFileFull";
         log(methodName, "started", true);
         log(methodName, "fileNumber: " + fileNumber);
         log(methodName, printData("dataToWrite", dataToWrite));
@@ -1181,18 +1238,27 @@ public class Ntag424DnaMethods {
             dataToWrite = Utils.hexStringToByteArray("0102030405060708090A");
         }
         // sanity checks
-        if ((!authenticateEv2FirstSuccess) & (!authenticateEv2NonFirstSuccess)) {
-            Log.d(TAG, "missing successful authentication with EV2First or EV2NonFirst, aborted");
-            System.arraycopy(RESPONSE_FAILURE_MISSING_AUTHENTICATION, 0, errorCode, 0, 2);
+        if ((fileNumber < (byte) 0x01) || (fileNumber > (byte) 0x03)) {
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "fileNumber is not in range 1..3, aborted";
+            return false;
+        }
+        if ((dataToWrite == null) || (dataToWrite.length < 1)) {
+            Log.e(TAG, methodName + " dataToWrite is NULL or of length 0, aborted");
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "dataToWrite is NULL or of length 0, aborted";
             return false;
         }
         if ((isoDep == null) || (!isoDep.isConnected())) {
-            Log.e(TAG, methodName + " lost connection to the card, aborted");
-            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "lost connection to the card, aborted";
             return false;
         }
-
-        // todo other sanity checks on values
+        if ((!authenticateEv2FirstSuccess) & (!authenticateEv2NonFirstSuccess)) {
+            errorCode = RESPONSE_FAILURE_MISSING_AUTHENTICATION.clone();
+            errorCodeReason = "missing successful authentication with EV2First or EV2NonFirst, aborted";
+            return false;
+        }
 
         // step 8
         // IV_Input (IV_Label || TI || CmdCounter || Padding)
@@ -1279,8 +1345,6 @@ public class Ntag424DnaMethods {
         }
 
         // step 13 encrypt macInput
-
-
         // generate the MAC (CMAC) with the SesAuthMACKey
         log(methodName, printData("SesAuthMACKey", SesAuthMACKey));
         byte[] macFull = calculateDiverseKey(SesAuthMACKey, sendMacInput);
@@ -1322,7 +1386,7 @@ public class Ntag424DnaMethods {
                 boolean testResult = compareTestModeValues(apdu, apdu_expected, "apdu");
                 response = response_expected.clone();
             } else {
-                response = isoDep.transceive(apdu);
+                response = sendData(apdu);
             }
             log(methodName, printData("response", response));
             //Log.d(TAG, methodName + printData(" response", response));
@@ -1335,7 +1399,7 @@ public class Ntag424DnaMethods {
         byte[] responseBytes = returnStatusBytes(response);
         System.arraycopy(responseBytes, 0, errorCode, 0, 2);
         if (checkResponse(response)) {
-            Log.d(TAG, methodName + " SUCCESS, now decrypting the received data");
+            Log.d(TAG, methodName + " SUCCESS, now verifying the received MAC");
         } else {
             Log.d(TAG, methodName + " FAILURE with error code " + Utils.bytesToHexNpeUpperCase(responseBytes));
             Log.d(TAG, methodName + " error code: " + EV3.getErrorCode(responseBytes));
@@ -1345,37 +1409,14 @@ public class Ntag424DnaMethods {
         // note: after sending data to the card the commandCounter is increased by 1
         CmdCounter++;
         log(methodName, "the CmdCounter is increased by 1 to " + CmdCounter);
-        byte[] commandCounterLsb2 = Utils.intTo2ByteArrayInversed(CmdCounter);
 
         responseMACTruncatedReceived = Arrays.copyOf(response, response.length - 2);
-        /*
         // verifying the received Response MAC
-        ByteArrayOutputStream responseMacBaos = new ByteArrayOutputStream();
-        responseMacBaos.write((byte) 0x00); // response code 00 means success
-        responseMacBaos.write(commandCounterLsb2, 0, commandCounterLsb2.length);
-        responseMacBaos.write(TransactionIdentifier, 0, TransactionIdentifier.length);
-        byte[] macInput2 = responseMacBaos.toByteArray();
-        log(methodName, printData("macInput2", macInput2));
-
-        byte[] responseMACCalculated = calculateDiverseKey(SesAuthMACKey, macInput2);
-        log(methodName, printData("responseMACCalculated", responseMACCalculated));
-        byte[] responseMACTruncatedCalculated = truncateMAC(responseMACCalculated);
-        log(methodName, printData("responseMACTruncatedCalculated", responseMACTruncatedCalculated));
-        log(methodName, printData("responseMACTruncatedReceived  ", responseMACTruncatedReceived));
-        // compare the responseMAC's
-        if (Arrays.equals(responseMACTruncatedCalculated, responseMACTruncatedReceived)) {
-            Log.d(TAG, "responseMAC SUCCESS");
-            System.arraycopy(RESPONSE_OK, 0, errorCode, 0, RESPONSE_OK.length);
-            return true;
-        } else {
-            Log.d(TAG, "responseMAC FAILURE");
-            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, RESPONSE_FAILURE.length);
-            return false;
-        }
-         */
         if (verifyResponseMac(responseMACTruncatedReceived, null)) {
+            errorCodeReason = "SUCCESS";
             return true;
         } else {
+            errorCodeReason = "FAILURE (see errorCode)";
             return false;
         }
     }
@@ -1419,6 +1460,12 @@ public class Ntag424DnaMethods {
         }
     }
 
+    /**
+     * section for key handling
+     * @return
+     */
+
+
     public List<Byte> getAllKeyVersions() {
         List<Byte> byteList = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
@@ -1435,20 +1482,22 @@ public class Ntag424DnaMethods {
         errorCode = new byte[2];
         // sanity checks
         if (keyNumber < 0) {
-            Log.e(TAG, methodName + " keyNumber is < 0, aborted");
-            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "keyNumber is < 0, aborted";
             return -1;
         }
-        if (keyNumber > 14) {
-            Log.e(TAG, methodName + " keyNumber is > 14, aborted");
-            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+        if (keyNumber > 4) {
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "keyNumber is > 4, aborted";
             return -1;
         }
+        
         if ((isoDep == null) || (!isoDep.isConnected())) {
-            Log.e(TAG, methodName + " lost connection to the card, aborted");
-            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "isoDep is NULL (maybe it is not a NTAG424DNA tag ?), aborted";
             return -1;
         }
+       
         byte[] apdu;
         byte[] response;
         try {
@@ -1474,10 +1523,184 @@ public class Ntag424DnaMethods {
             errorCodeReason = methodName + " FAILURE";
             return -1;
         }
-
-
     }
 
+    public boolean changeApplicationKey(byte keyNumber, byte[] keyNew, byte[] keyOld, byte keyVersionNew) {
+
+        // see NTAG 424 DNA NT4H2421Gx.pdf pages 62 - 63
+        // see NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf pages 40 - 42
+        // see Mifare DESFire Light Features and Hints AN12343.pdf pages 76 - 80
+        // this is based on the key change of an application key on a DESFire Light card
+        // Cmd.ChangeKey is always run in CommunicationMode.Full and there are 2 use cases:
+        // Case 1: Key number to be changed ≠ Key number for currently authenticated session
+        // Case 2: Key number to be changed == Key number for currently authenticated session (usually the application Master key)
+
+        String logData = "";
+        final String methodName = "changeApplicationKey";
+        log(methodName, "started", true);
+        log(methodName, "keyNumber: " + keyNumber);
+        log(methodName, printData("keyNew", keyNew));
+        log(methodName, printData("keyOld", keyOld));
+        log(methodName, "keyVersionNew: " + keyVersionNew);
+        // sanity checks
+        errorCode = new byte[2];
+        // sanity checks
+        if (keyNumber < 0) {
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "keyNumber is < 0, aborted";
+            return false;
+        }
+        if (keyNumber > 4) {
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "keyNumber is > 4, aborted";
+            return false;
+        }
+        if ((keyNew == null) || (keyNew.length != 16)) {
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "keyNew length is not 16, aborted";
+            return false;
+        }
+        if ((keyOld == null) || (keyOld.length != 16)) {
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "keyOld length is not 16, aborted";
+            return false;
+        }
+        if (keyVersionNew < 0) {
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "keyVersionNew is < 0, aborted";
+            return false;
+        }
+        if ((isoDep == null) || (!isoDep.isConnected())) {
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "isoDep is NULL (maybe it is not a NTAG424DNA tag ?), aborted";
+            return false;
+        }
+/*
+        if ((!authenticateEv2FirstSuccess) & (!authenticateEv2NonFirstSuccess)) {
+            Log.d(TAG, "missing successful authentication with EV2First or EV2NonFirst, aborted");
+            System.arraycopy(RESPONSE_FAILURE_MISSING_AUTHENTICATION, 0, errorCode, 0, 2);
+            return false;
+        }
+
+ */
+
+        // Encrypting the Command Data
+        // IV_Input (IV_Label || TI || CmdCounter || Padding)
+        byte[] commandCounterLsb = Utils.intTo2ByteArrayInversed(CmdCounter);
+        log(methodName, "CmdCounter: " + CmdCounter);
+        log(methodName, printData("commandCounterLsb", commandCounterLsb));
+        byte[] padding1 = hexStringToByteArray("0000000000000000"); // 8 bytes
+        ByteArrayOutputStream baosIvInput = new ByteArrayOutputStream();
+        baosIvInput.write(HEADER_MAC, 0, HEADER_MAC.length);
+        baosIvInput.write(TransactionIdentifier, 0, TransactionIdentifier.length);
+        baosIvInput.write(commandCounterLsb, 0, commandCounterLsb.length);
+        baosIvInput.write(padding1, 0, padding1.length);
+        byte[] ivInput = baosIvInput.toByteArray();
+        log(methodName, printData("ivInput", ivInput));
+
+        // IV for CmdData = Enc(KSesAuthENC, IV_Input)
+        log(methodName, printData("SesAuthENCKey", SesAuthENCKey));
+        byte[] startingIv = new byte[16];
+        byte[] ivForCmdData = AES.encrypt(startingIv, SesAuthENCKey, ivInput);
+        log(methodName, printData("ivForCmdData", ivForCmdData));
+
+        // Data (New KeyValue || New KeyVersion || CRC32 of New KeyValue || Padding)
+        // 0123456789012345678901234567890100A0A608688000000000000000000000
+        // 01234567890123456789012345678901 00 A0A60868 8000000000000000000000
+        // keyNew 16 byte              keyVers crc32 4  padding 11 bytes
+
+        // error: this is missing in DESFire Light Feature & Hints
+        // see MIFARE DESFire Light contactless application IC MF2DLHX0.pdf page 71
+        // 'if key 1 to 4 are to be changed (NewKey XOR OldKey) || KeyVer || CRC32NK'
+        // if the keyNumber of the key to change is not the keyNumber that authenticated
+        // we need to xor the new key with the old key, the CRC32 is run over the real new key (not the  XORed one)
+        byte[] keyNewXor = keyNew.clone();
+        for (int i = 0; i < keyOld.length; i++) {
+            keyNewXor[i] ^= keyOld[i % keyOld.length];
+        }
+        log(methodName, printData("keyNewXor", keyNewXor));
+        byte[] crc32 = CRC32.get(keyNew);
+        log(methodName, printData("crc32 of keyNew", crc32));
+        byte[] padding = hexStringToByteArray("8000000000000000000000");
+        ByteArrayOutputStream baosData = new ByteArrayOutputStream();
+        baosData.write(keyNewXor, 0, keyNewXor.length);
+        baosData.write(keyVersionNew);
+        baosData.write(crc32, 0, crc32.length);
+        baosData.write(padding, 0, padding.length);
+        byte[] data = baosData.toByteArray();
+        log(methodName, printData("data", data));
+
+        // Encrypt the Command Data = E(KSesAuthENC, Data)
+        byte[] encryptedData = AES.encrypt(ivForCmdData, SesAuthENCKey, data);
+        log(methodName, printData("encryptedData", encryptedData));
+
+        // MAC_Input (Ins || CmdCounter || TI || CmdHeader = keyNumber || Encrypted CmdData )
+        // C40000BC354CD50180D40DB52D5D8CA136249A0A14154DBA1BE0D67C408AB24CF0F3D3B4FE333C6A
+        // C4 0000 BC354CD5 01 80D40DB52D5D8CA136249A0A14154DBA1BE0D67C408AB24CF0F3D3B4FE333C6A
+        ByteArrayOutputStream baosMacInput = new ByteArrayOutputStream();
+        baosMacInput.write(CHANGE_KEY_SECURE_COMMAND); // 0xC4
+        baosMacInput.write(commandCounterLsb, 0, commandCounterLsb.length);
+        baosMacInput.write(TransactionIdentifier, 0, TransactionIdentifier.length);
+        baosMacInput.write(keyNumber);
+        baosMacInput.write(encryptedData, 0, encryptedData.length);
+        byte[] macInput = baosMacInput.toByteArray();
+        log(methodName, printData("macInput", macInput));
+
+        // generate the MAC (CMAC) with the SesAuthMACKey
+        log(methodName, printData("SesAuthMACKey", SesAuthMACKey));
+        byte[] macFull = calculateDiverseKey(SesAuthMACKey, macInput);
+        log(methodName, printData("macFull", macFull));
+        // now truncate the MAC
+        byte[] macTruncated = truncateMAC(macFull);
+        log(methodName, printData("macTruncated", macTruncated));
+
+        // Data (CmdHeader = keyNumber || Encrypted Data || MAC)
+        ByteArrayOutputStream baosChangeKeyCommand = new ByteArrayOutputStream();
+        baosChangeKeyCommand.write(keyNumber);
+        baosChangeKeyCommand.write(encryptedData, 0, encryptedData.length);
+        baosChangeKeyCommand.write(macTruncated, 0, macTruncated.length);
+        byte[] changeKeyCommand = baosChangeKeyCommand.toByteArray();
+        log(methodName, printData("changeKeyCommand", changeKeyCommand));
+
+        byte[] response = new byte[0];
+        byte[] apdu = new byte[0];
+        byte[] responseMACTruncatedReceived;
+        try {
+            apdu = wrapMessage(CHANGE_KEY_SECURE_COMMAND, changeKeyCommand);
+            log(methodName, printData("apdu", apdu));
+            response = isoDep.transceive(apdu);
+            log(methodName, printData("response", response));
+            //Log.d(TAG, methodName + printData(" response", response));
+        } catch (IOException e) {
+            Log.e(TAG, methodName + " transceive failed, IOException:\n" + e.getMessage());
+            log(methodName, "transceive failed: " + e.getMessage(), false);
+            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            return false;
+        }
+        byte[] responseBytes = returnStatusBytes(response);
+        System.arraycopy(responseBytes, 0, errorCode, 0, 2);
+        if (checkResponse(response)) {
+            Log.d(TAG, methodName + " SUCCESS, now decrypting the received data");
+        } else {
+            Log.d(TAG, methodName + " FAILURE with error code " + Utils.bytesToHexNpeUpperCase(responseBytes));
+            Log.d(TAG, methodName + " error code: " + EV3.getErrorCode(responseBytes));
+            return false;
+        }
+
+        // note: after sending data to the card the commandCounter is increased by 1
+        CmdCounter++;
+        log(methodName, "the CmdCounter is increased by 1 to " + CmdCounter);
+
+        // compare the responseMAC's
+        responseMACTruncatedReceived = Arrays.copyOf(response, response.length - 2);
+        if (verifyResponseMac(responseMACTruncatedReceived, null)) {
+            errorCodeReason = "SUCCESS";
+            return true;
+        } else {
+            errorCodeReason = "FAILURE (see errorCode)";
+            return false;
+        }
+    }
 
     /**
      * service methods
@@ -1639,15 +1862,15 @@ public class Ntag424DnaMethods {
         log(methodName, printData("rndA", rndA) + printData(" rndB", rndB) + printData(" authenticationKey", authenticationKey), false);
         // sanity checks
         if ((rndA == null) || (rndA.length != 16)) {
-            log(methodName, "rndA is NULL or wrong length, aborted", false);
+            log(methodName, "rndA is NULL or wrong length, aborted");
             return null;
         }
         if ((rndB == null) || (rndB.length != 16)) {
-            log(methodName, "rndB is NULL or wrong length, aborted", false);
+            log(methodName, "rndB is NULL or wrong length, aborted");
             return null;
         }
         if ((authenticationKey == null) || (authenticationKey.length != 16)) {
-            log(methodName, "authenticationKey is NULL or wrong length, aborted", false);
+            log(methodName, "authenticationKey is NULL or wrong length, aborted");
             return null;
         }
 
@@ -1684,27 +1907,27 @@ SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ Rn
         byte[] rndA02to07 = new byte[6];
         byte[] rndB00to05 = new byte[6];
         rndA02to07 = Arrays.copyOfRange(rndA, 2, 8);
-        log(methodName, printData("rndA     ", rndA), false);
-        log(methodName, printData("rndA02to07", rndA02to07), false);
+        log(methodName, printData("rndA     ", rndA));
+        log(methodName, printData("rndA02to07", rndA02to07));
         rndB00to05 = Arrays.copyOfRange(rndB, 0, 6);
-        log(methodName, printData("rndB     ", rndB), false);
-        log(methodName, printData("rndB00to05", rndB00to05), false);
+        log(methodName, printData("rndB     ", rndB));
+        log(methodName, printData("rndB00to05", rndB00to05));
         byte[] xored = xor(rndA02to07, rndB00to05);
-        log(methodName, printData("xored     ", xored), false);
+        log(methodName, printData("xored     ", xored));
         System.arraycopy(xored, 0, cmacInput, 8, 6);
         System.arraycopy(rndB, 6, cmacInput, 14, 10);
         System.arraycopy(rndA, 8, cmacInput, 24, 8);
 
-        log(methodName, printData("rndA     ", rndA), false);
-        log(methodName, printData("rndB     ", rndB), false);
-        log(methodName, printData("cmacInput", cmacInput), false);
+        log(methodName, printData("rndA     ", rndA));
+        log(methodName, printData("rndB     ", rndB));
+        log(methodName, printData("cmacInput", cmacInput));
         if (TEST_MODE) {
             boolean testResult = compareTestModeValues(cmacInput, sv1_expected, "SV1");
         }
         byte[] iv = new byte[16];
-        log(methodName, printData("iv       ", iv), false);
+        log(methodName, printData("iv       ", iv));
         byte[] cmac = calculateDiverseKey(authenticationKey, cmacInput);
-        log(methodName, printData("cmacOut ", cmac), false);
+        log(methodName, printData("cmacOut ", cmac));
         if (TEST_MODE) {
             boolean testResult = compareTestModeValues(cmac, SesAuthENCKey_expected, "SesAUthENCKey");
         }
@@ -1715,18 +1938,18 @@ SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ Rn
         // see
         // see MIFARE DESFire Light contactless application IC pdf, page 28
         final String methodName = "getSesAuthEncKey";
-        log(methodName, printData("rndA", rndA) + printData(" rndB", rndB) + printData(" authenticationKey", authenticationKey), false);
+        log(methodName, printData("rndA", rndA) + printData(" rndB", rndB) + printData(" authenticationKey", authenticationKey));
         // sanity checks
         if ((rndA == null) || (rndA.length != 16)) {
-            log(methodName, "rndA is NULL or wrong length, aborted", false);
+            log(methodName, "rndA is NULL or wrong length, aborted");
             return null;
         }
         if ((rndB == null) || (rndB.length != 16)) {
-            log(methodName, "rndB is NULL or wrong length, aborted", false);
+            log(methodName, "rndB is NULL or wrong length, aborted");
             return null;
         }
         if ((authenticationKey == null) || (authenticationKey.length != 16)) {
-            log(methodName, "authenticationKey is NULL or wrong length, aborted", false);
+            log(methodName, "authenticationKey is NULL or wrong length, aborted");
             return null;
         }
 
@@ -1743,24 +1966,24 @@ SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ Rn
         byte[] rndA02to07 = new byte[6];
         byte[] rndB00to05 = new byte[6];
         rndA02to07 = Arrays.copyOfRange(rndA, 2, 8);
-        log(methodName, printData("rndA     ", rndA), false);
-        log(methodName, printData("rndA02to07", rndA02to07), false);
+        log(methodName, printData("rndA     ", rndA));
+        log(methodName, printData("rndA02to07", rndA02to07));
         rndB00to05 = Arrays.copyOfRange(rndB, 0, 6);
-        log(methodName, printData("rndB     ", rndB), false);
-        log(methodName, printData("rndB00to05", rndB00to05), false);
+        log(methodName, printData("rndB     ", rndB));
+        log(methodName, printData("rndB00to05", rndB00to05));
         byte[] xored = xor(rndA02to07, rndB00to05);
-        log(methodName, printData("xored     ", xored), false);
+        log(methodName, printData("xored     ", xored));
         System.arraycopy(xored, 0, cmacInput, 8, 6);
         System.arraycopy(rndB, 6, cmacInput, 14, 10);
         System.arraycopy(rndA, 8, cmacInput, 24, 8);
 
-        log(methodName, printData("rndA     ", rndA), false);
-        log(methodName, printData("rndB     ", rndB), false);
-        log(methodName, printData("cmacInput", cmacInput), false);
+        log(methodName, printData("rndA     ", rndA));
+        log(methodName, printData("rndB     ", rndB));
+        log(methodName, printData("cmacInput", cmacInput));
         byte[] iv = new byte[16];
-        log(methodName, printData("iv       ", iv), false);
+        log(methodName, printData("iv       ", iv));
         byte[] cmac = calculateDiverseKey(authenticationKey, cmacInput);
-        log(methodName, printData("cmacOut ", cmac), false);
+        log(methodName, printData("cmacOut ", cmac));
         return cmac;
     }
 
@@ -1780,18 +2003,18 @@ SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ Rn
         // see
         // see MIFARE DESFire Light contactless application IC pdf, page 28
         final String methodName = "getSesAuthMacKey";
-        log(methodName, printData("rndA", rndA) + printData(" rndB", rndB) + printData(" authenticationKey", authenticationKey), false);
+        log(methodName, printData("rndA", rndA) + printData(" rndB", rndB) + printData(" authenticationKey", authenticationKey));
         // sanity checks
         if ((rndA == null) || (rndA.length != 16)) {
-            log(methodName, "rndA is NULL or wrong length, aborted", false);
+            log(methodName, "rndA is NULL or wrong length, aborted");
             return null;
         }
         if ((rndB == null) || (rndB.length != 16)) {
-            log(methodName, "rndB is NULL or wrong length, aborted", false);
+            log(methodName, "rndB is NULL or wrong length, aborted");
             return null;
         }
         if ((authenticationKey == null) || (authenticationKey.length != 16)) {
-            log(methodName, "authenticationKey is NULL or wrong length, aborted", false);
+            log(methodName, "authenticationKey is NULL or wrong length, aborted");
             return null;
         }
         // see Mifare DESFire Light Features and Hints AN12343.pdf page 35
@@ -1807,24 +2030,24 @@ SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ Rn
         byte[] rndA02to07 = new byte[6];
         byte[] rndB00to05 = new byte[6];
         rndA02to07 = Arrays.copyOfRange(rndA, 2, 8);
-        log(methodName, printData("rndA     ", rndA), false);
-        log(methodName, printData("rndA02to07", rndA02to07), false);
+        log(methodName, printData("rndA     ", rndA));
+        log(methodName, printData("rndA02to07", rndA02to07));
         rndB00to05 = Arrays.copyOfRange(rndB, 0, 6);
-        log(methodName, printData("rndB     ", rndB), false);
-        log(methodName, printData("rndB00to05", rndB00to05), false);
+        log(methodName, printData("rndB     ", rndB));
+        log(methodName, printData("rndB00to05", rndB00to05));
         byte[] xored = xor(rndA02to07, rndB00to05);
-        log(methodName, printData("xored     ", xored), false);
+        log(methodName, printData("xored     ", xored));
         System.arraycopy(xored, 0, cmacInput, 8, 6);
         System.arraycopy(rndB, 6, cmacInput, 14, 10);
         System.arraycopy(rndA, 8, cmacInput, 24, 8);
 
-        log(methodName, printData("rndA     ", rndA), false);
-        log(methodName, printData("rndB     ", rndB), false);
-        log(methodName, printData("cmacInput", cmacInput), false);
+        log(methodName, printData("rndA     ", rndA));
+        log(methodName, printData("rndB     ", rndB));
+        log(methodName, printData("cmacInput", cmacInput));
         byte[] iv = new byte[16];
-        log(methodName, printData("iv       ", iv), false);
+        log(methodName, printData("iv       ", iv));
         byte[] cmac = calculateDiverseKey(authenticationKey, cmacInput);
-        log(methodName, printData("cmacOut ", cmac), false);
+        log(methodName, printData("cmacOut ", cmac));
         return cmac;
     }
 
@@ -2142,6 +2365,113 @@ SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ Rn
         }
         log(methodName, printData("received  <--", recvBuffer));
         return recvBuffer;
+    }
+
+    /**
+     * The methods tries to reset all settings to factory settings. It is necessary to provide all
+     * (changed) keys
+     * @param applicationKeys : is a byte[][] of length 5 containing the applicationKeys 0..4 applied to the tag
+     * @return true on success
+     */
+
+    public boolean resetToFactorySettings(byte[][] applicationKeys) {
+        logData = "";
+        invalidateAllDataNonFirst();
+        final String methodName = "resetToFactorySettings";
+        log(methodName, "started", true);
+        if (applicationKeys == null) {
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "applicationKeys are NULL, aborted";
+            return false;
+        }
+        if (applicationKeys.length != 5) {
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "number of applicationKeys is not 5, aborted";
+            return false;
+        }
+        if ((isoDep == null) || (!isoDep.isConnected())) {
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "isoDep is NULL (maybe it is not a NTAG424DNA tag ?), aborted";
+            return false;
+        }
+
+        final byte[] file01_content = hexStringToByteArray("001720010000ff0406e104010000000506e10500808283000000000000000000");
+        final byte[] file02_content = new byte[256];
+        final byte[] file03_content = new byte[128];
+        final byte[] file01_fileSettings = hexStringToByteArray("000000e0200000");
+        final byte[] file02_fileSettings = hexStringToByteArray("0000e0ee000100");
+        final byte[] file03_fileSettings = hexStringToByteArray("00033023800000");
+        final byte defaultKeyVersion = (byte) 0x00; // valid for all 5 application keys
+        final byte[] defaultApplicationKey = new byte[16]; // valid for all 5 application keys
+
+/*
+fileNumber: 01
+fileType: 0 (Standard)
+communicationSettings: 00 (Plain)
+accessRights RW | CAR: 00
+accessRights R  | W:   E0
+accessRights RW:       0
+accessRights CAR:      0
+accessRights R:        14
+accessRights W:        0
+fileSize: 32
+--------------
+fileNumber: 02
+fileType: 0 (Standard)
+communicationSettings: 00 (Plain)
+accessRights RW | CAR: E0
+accessRights R  | W:   EE
+accessRights RW:       14
+accessRights CAR:      0
+accessRights R:        14
+accessRights W:        14
+fileSize: 256
+--------------
+fileNumber: 03
+fileType: 0 (Standard)
+communicationSettings: 03 (Encrypted)
+accessRights RW | CAR: 30
+accessRights R  | W:   23
+accessRights RW:       3
+accessRights CAR:      0
+accessRights R:        2
+accessRights W:        3
+fileSize: 128
+         */
+
+        boolean success;
+        boolean[] successes = new boolean[20]; // takes all success values
+        /*
+        successes 00 .. 04: test authenticate with application keys
+        successes 05
+         */
+
+        // before running any change or write tasks I'm checking that all applicationKeys are valid using authenticateEv2First
+        boolean authenticateSuccess = true;
+        for (int i = 0; i < 5; i++) {
+            success = authenticateAesEv2First((byte) (i & 0x0F), applicationKeys[i]);
+            successes[i] = success;
+            if (!success) authenticateSuccess = false; // triggers the overall authenticate result
+        }
+        if (!authenticateSuccess) {
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "One or more application keys are NOT valid, aborted";
+            return false;
+        }
+
+        // change application Master key to default with keyVersion 0x00
+        //success = changeApplicationKey();
+
+        // change application keys 1..4 to default with keyVersion 0x00
+
+        // change fileSettings for files 1..3 to default
+
+        // write factory content to files
+        success = writeStandardFilePlain(STANDARD_FILE_NUMBER_01, file01_content, 0, file01_content.length);
+        success = writeStandardFilePlain(STANDARD_FILE_NUMBER_02, file02_content, 0, file02_content.length);
+        success = writeStandardFileFull(STANDARD_FILE_NUMBER_01, file03_content, 0, file03_content.length, false);
+
+        return false;
     }
 
     /**

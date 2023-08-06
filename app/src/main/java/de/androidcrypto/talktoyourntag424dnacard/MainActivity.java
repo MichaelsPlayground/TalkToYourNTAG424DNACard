@@ -118,9 +118,8 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     /**
      * section for authentication
      */
-
-    private Button authDM0D, authD0D, authD1D, authD2D, authD3D, authD4D; // auth with default DES keys
-    private Button authDM0DC, authD0DC, authD1DC, authD2DC, authD3DC, authD4DC; // auth with changed DES keys
+    private Button authKey0D, authKey1D, authKey2D, authKey3D, authKey4D; // default keys
+    private Button authKey0C, authKey1C, authKey2C, authKey3C, authKey4C; // changed keys
 
     private byte KEY_NUMBER_USED_FOR_AUTHENTICATION; // the key number used for a successful authentication
     private byte[] SESSION_KEY_DES; // filled in authenticate, simply the first (leftmost) 8 bytes of SESSION_KEY_TDES
@@ -199,31 +198,22 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
      * section for application keys
      */
 
-    private final byte[] APPLICATION_KEY_MASTER_DES_DEFAULT = Utils.hexStringToByteArray("0000000000000000"); // default DES key with 8 nulls
-    private final byte[] APPLICATION_KEY_MASTER_DES = Utils.hexStringToByteArray("D000000000000000");
     private final byte[] APPLICATION_KEY_MASTER_AES_DEFAULT = Utils.hexStringToByteArray("00000000000000000000000000000000"); // default AES key with 16 nulls
     private final byte[] APPLICATION_KEY_MASTER_AES = Utils.hexStringToByteArray("A08899AABBCCDD223344556677889911");
     private final byte APPLICATION_KEY_MASTER_NUMBER = (byte) 0x00;
 
-    private final byte[] APPLICATION_KEY_RW_DES_DEFAULT = Utils.hexStringToByteArray("0000000000000000"); // default DES key with 8 nulls
-    private final byte[] APPLICATION_KEY_RW_DES = Utils.hexStringToByteArray("D10023456789ABCD");
-    private final byte[] APPLICATION_KEY_RW_DES_2 = Utils.hexStringToByteArray("D100445566778899");
-    private final byte[] APPLICATION_KEY_RW_AES_DEFAULT = Utils.hexStringToByteArray("00000000000000000000000000000000"); // default AES key with 16 nulls
-    private final byte APPLICATION_KEY_RW_NUMBER = (byte) 0x03; // changed to DESFIRE
-    private final byte[] APPLICATION_KEY_CAR_DES_DEFAULT = Utils.hexStringToByteArray("0000000000000000"); // default DES key with 8 nulls
-    private final byte[] APPLICATION_KEY_CAR_DES = Utils.hexStringToByteArray("D2100000000000000");
-    private final byte[] APPLICATION_KEY_CAR_AES_DEFAULT = Utils.hexStringToByteArray("00000000000000000000000000000000"); // default AES key with 16 nulls
-    private final byte[] APPLICATION_KEY_CAR_AES = Utils.hexStringToByteArray("A2000000000000000000000000000000");
-    private final byte APPLICATION_KEY_CAR_NUMBER = (byte) 0x00;
-    private final byte[] APPLICATION_KEY_R_DES_DEFAULT = Utils.hexStringToByteArray("0000000000000000"); // default DES key with 8 nulls
-    private final byte[] APPLICATION_KEY_R_DES = Utils.hexStringToByteArray("D3100000000000000");
-    private final byte[] APPLICATION_KEY_R_AES_DEFAULT = Utils.hexStringToByteArray("00000000000000000000000000000000"); // default AES key with 16 nulls
-    private final byte[] APPLICATION_KEY_R_AES = Utils.hexStringToByteArray("A3000000000000000000000000000000");
-    private final byte APPLICATION_KEY_R_NUMBER = (byte) 0x02;
-    private final byte[] APPLICATION_KEY_W_DES_DEFAULT = Utils.hexStringToByteArray("0000000000000000"); // default DES key with 8 nulls
-    private final byte[] APPLICATION_KEY_W_DES = Utils.hexStringToByteArray("D4100000000000000");
-
-    private final byte APPLICATION_KEY_W_NUMBER = (byte) 0x04;
+    private final byte[] APPLICATION_KEY_1_AES_DEFAULT = Utils.hexStringToByteArray("00000000000000000000000000000000"); // default AES key with 16 nulls
+    private final byte[] APPLICATION_KEY_1_AES = Utils.hexStringToByteArray("A1000000000000000000000000000000");
+    private final byte APPLICATION_KEY_1_NUMBER = (byte) 0x01;
+    private final byte[] APPLICATION_KEY_2_AES_DEFAULT = Utils.hexStringToByteArray("00000000000000000000000000000000"); // default AES key with 16 nulls
+    private final byte[] APPLICATION_KEY_2_AES = Utils.hexStringToByteArray("A2000000000000000000000000000000");
+    private final byte APPLICATION_KEY_2_NUMBER = (byte) 0x02;
+    private final byte[] APPLICATION_KEY_3_AES_DEFAULT = Utils.hexStringToByteArray("00000000000000000000000000000000"); // default AES key with 16 nulls
+    private final byte[] APPLICATION_KEY_3_AES = Utils.hexStringToByteArray("A3000000000000000000000000000000");
+    private final byte APPLICATION_KEY_3_NUMBER = (byte) 0x03;
+    private final byte[] APPLICATION_KEY_4_AES_DEFAULT = Utils.hexStringToByteArray("00000000000000000000000000000000"); // default AES key with 16 nulls
+    private final byte[] APPLICATION_KEY_4_AES = Utils.hexStringToByteArray("A4000000000000000000000000000000");
+    private final byte APPLICATION_KEY_4_NUMBER = (byte) 0x04;
 
     // see Mifare DESFire Light Features and Hints AN12343.pdf, page 83-84
     private final byte[] TRANSACTION_MAC_KEY_AES = Utils.hexStringToByteArray("F7D23E0C44AFADE542BFDF2DC5C6AE02"); // taken from Mifare DESFire Light Features and Hints AN12343.pdf, pages 83-84
@@ -356,19 +346,20 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         fileStandardSize = findViewById(R.id.etFileStandardSize);
         fileStandardData = findViewById(R.id.etFileStandardData);
 
-        // authentication handling DES default keys
-        authDM0D = findViewById(R.id.btnAuthDM0D);
-        authD0D = findViewById(R.id.btnAuthD0D);
-        authD1D = findViewById(R.id.btnAuthD1D);
-        authD2D = findViewById(R.id.btnAuthD2D);
-        authD3D = findViewById(R.id.btnAuthD3D);
-        authD4D = findViewById(R.id.btnAuthD4D);
-        // authentication handling DES changed keys
-        authD0DC = findViewById(R.id.btnAuthD0DC);
-        authD1DC = findViewById(R.id.btnAuthD1DC);
-        authD2DC = findViewById(R.id.btnAuthD2DC);
-        authD3DC = findViewById(R.id.btnAuthD3DC);
-        authD4DC = findViewById(R.id.btnAuthD4DC);
+        // authentication handling DEFAULT keys
+        authKey0D = findViewById(R.id.btnAuthKey0D);
+        authKey1D = findViewById(R.id.btnAuthKey1D);
+        authKey2D = findViewById(R.id.btnAuthKey2D);
+        authKey3D = findViewById(R.id.btnAuthKey3D);
+        authKey4D = findViewById(R.id.btnAuthKey4D);
+
+        // authentication handling CHANGED keys
+        authKey0C = findViewById(R.id.btnAuthKey0C);
+        authKey1C = findViewById(R.id.btnAuthKey1C);
+        authKey2C = findViewById(R.id.btnAuthKey2C);
+        authKey3C = findViewById(R.id.btnAuthKey3C);
+        authKey4C = findViewById(R.id.btnAuthKey4C);
+
 
         // general handling
         getCardUidDes = findViewById(R.id.btnGetCardUidDes);
@@ -711,7 +702,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 }
 
                 byte[] responseData = new byte[2];
-                boolean success = ntag424DnaMethods.authenticateAesEv2First(APPLICATION_KEY_R_NUMBER, APPLICATION_KEY_R_AES_DEFAULT);
+                boolean success = ntag424DnaMethods.authenticateAesEv2First(APPLICATION_KEY_2_NUMBER, APPLICATION_KEY_2_AES_DEFAULT);
                 responseData = ntag424DnaMethods.getErrorCode();
                 if (success) {
                     writeToUiAppend(output, logString + " SUCCESS");
@@ -757,7 +748,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 //writeToUiAppend(output, "getSesAuthKeyTestResult: " + getSesAuthKeyTestResult);
 
                 byte[] responseData = new byte[2];
-                boolean success = ntag424DnaMethods.authenticateAesEv2First(APPLICATION_KEY_RW_NUMBER, APPLICATION_KEY_RW_AES_DEFAULT);
+                boolean success = ntag424DnaMethods.authenticateAesEv2First(APPLICATION_KEY_3_NUMBER, APPLICATION_KEY_3_AES_DEFAULT);
                 responseData = ntag424DnaMethods.getErrorCode();
                 if (success) {
                     writeToUiAppend(output, logString + " SUCCESS");
@@ -803,7 +794,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 //writeToUiAppend(output, "getSesAuthKeyTestResult: " + getSesAuthKeyTestResult);
 
                 byte[] responseData = new byte[2];
-                boolean success = desfireAuthenticateEv2.authenticateAesEv2First(APPLICATION_KEY_R_NUMBER, APPLICATION_KEY_R_AES);
+                boolean success = desfireAuthenticateEv2.authenticateAesEv2First(APPLICATION_KEY_3_NUMBER, APPLICATION_KEY_3_AES);
                 responseData = desfireAuthenticateEv2.getErrorCode();
                 if (success) {
                     writeToUiAppend(output, logString + " SUCCESS");
@@ -1093,7 +1084,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 }
 
                 byte[] responseData = new byte[2];
-                boolean success = desfireAuthenticateEv2.changeApplicationKeyEv2(APPLICATION_KEY_R_NUMBER, APPLICATION_KEY_R_AES, APPLICATION_KEY_R_AES_DEFAULT);
+                boolean success = desfireAuthenticateEv2.changeApplicationKeyEv2(APPLICATION_KEY_3_NUMBER, APPLICATION_KEY_3_AES, APPLICATION_KEY_3_AES_DEFAULT);
                 responseData = desfireAuthenticateEv2.getErrorCode();
                 if (success) {
                     writeToUiAppend(output, logString + " SUCCESS");
@@ -1120,7 +1111,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 }
 
                 byte[] responseData = new byte[2];
-                boolean success = desfireAuthenticateEv2.changeApplicationKeyEv2(APPLICATION_KEY_R_NUMBER, APPLICATION_KEY_R_AES_DEFAULT, APPLICATION_KEY_R_AES);
+                boolean success = desfireAuthenticateEv2.changeApplicationKeyEv2(APPLICATION_KEY_3_NUMBER, APPLICATION_KEY_3_AES_DEFAULT, APPLICATION_KEY_3_AES);
                 responseData = desfireAuthenticateEv2.getErrorCode();
                 if (success) {
                     writeToUiAppend(output, logString + " SUCCESS");
@@ -1345,6 +1336,126 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
             }
         });
 
+        /**
+         * section for authentication with DEFAULT AES keys
+         */
+
+        authKey0D.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // authenticate with the read access key = 03...
+                clearOutputFields();
+                String logString = "authenticateEv2First with DEFAULT AES key number 0x00 = application Master key";
+                writeToUiAppend(output, logString);
+
+                boolean success = runAuthentication(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_AES_DEFAULT);
+            }
+        });
+
+        authKey1D.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "authenticateEv2First with DEFAULT AES key number 0x01";
+                writeToUiAppend(output, logString);
+
+                boolean success = runAuthentication(APPLICATION_KEY_1_NUMBER, APPLICATION_KEY_1_AES_DEFAULT);
+            }
+        });
+
+        authKey2D.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "authenticateEv2First with DEFAULT AES key number 0x02";
+                writeToUiAppend(output, logString);
+
+                boolean success = runAuthentication(APPLICATION_KEY_2_NUMBER, APPLICATION_KEY_2_AES_DEFAULT);
+            }
+        });
+
+        authKey3D.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "authenticateEv2First with DEFAULT AES key number 0x03";
+                writeToUiAppend(output, logString);
+
+                boolean success = runAuthentication(APPLICATION_KEY_3_NUMBER, APPLICATION_KEY_3_AES_DEFAULT);
+            }
+        });
+
+        authKey4D.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "authenticateEv2First with DEFAULT AES key number 0x04";
+                writeToUiAppend(output, logString);
+
+                boolean success = runAuthentication(APPLICATION_KEY_4_NUMBER, APPLICATION_KEY_4_AES_DEFAULT);
+            }
+        });
+
+        /**
+         * section for authentication with CHANGED AES key
+         */
+
+        authKey0C.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "authenticateEv2First with CHANGED AES key number 0x00 = application Master key";
+                writeToUiAppend(output, logString);
+
+                boolean success = runAuthentication(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_AES);
+            }
+        });
+
+        authKey1C.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "authenticateEv2First with CHANGED AES key number 0x01";
+                writeToUiAppend(output, logString);
+
+                boolean success = runAuthentication(APPLICATION_KEY_1_NUMBER, APPLICATION_KEY_1_AES);
+            }
+        });
+
+        authKey2C.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "authenticateEv2First with CHANGED AES key number 0x02";
+                writeToUiAppend(output, logString);
+
+                boolean success = runAuthentication(APPLICATION_KEY_2_NUMBER, APPLICATION_KEY_2_AES);
+            }
+        });
+
+        authKey3C.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "authenticateEv2First with CHANGED AES key number 0x03";
+                writeToUiAppend(output, logString);
+
+                boolean success = runAuthentication(APPLICATION_KEY_3_NUMBER, APPLICATION_KEY_3_AES);
+            }
+        });
+
+        authKey4C.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "authenticateEv2First with CHANGED AES key number 0x04";
+                writeToUiAppend(output, logString);
+
+                boolean success = runAuthentication(APPLICATION_KEY_4_NUMBER, APPLICATION_KEY_4_AES);
+            }
+        });
+
+
         getFileSettings.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -1513,524 +1624,6 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
             }
         });
 
-        /**
-         * section for authentication with DEFAULT DES keys
-         */
-
-        authD0D.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // authenticate with the application master key = 00...
-                clearOutputFields();
-                String logString = "authenticate with DEFAULT DES key number 0x00 = application master key";
-                writeToUiAppend(output, logString);
-                if (selectedApplicationId == null) {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
-                    return;
-                }
-                byte[] responseData = new byte[2];
-
-                // this is the authentication method from the NFCJLIB, working correctly
-                boolean success = desfireAuthenticate.authenticateWithNfcjlibDes(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_DES_DEFAULT);
-
-                if (success) {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    writeToUiAppend(output, logString + " SUCCESS");
-                    SESSION_KEY_DES = desfireAuthenticate.getSessionKey();
-                    vibrateShort();
-                    // show logData
-
-                    // prepare data for export
-                    exportString = desfireAuthenticate.getLogData();
-                    exportStringFileName = "auth0d_ev2.html";
-                    writeToUiToast("your authentication log file is ready for export");
-
-                    //showDialog(MainActivity.this, desfireAuthenticate.getLogData());
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                }
-            }
-        });
-
-        authD1D.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // authenticate with the read&write access key = 01...
-                clearOutputFields();
-                String logString = "authenticate with DEFAULT DES key number 0x01 = read & write access key";
-                writeToUiAppend(output, logString);
-                if (selectedApplicationId == null) {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
-                    return;
-                }
-                byte[] responseData = new byte[2];
-                // this is the authentication method from the NFCJLIB, working correctly
-                //boolean success = desfireAuthenticate.authenticateWithNfcjlibDes(APPLICATION_KEY_RW_NUMBER, APPLICATION_KEY_RW_DES_DEFAULT);
-                boolean success = desfireAuthenticateLegacy.authenticateD40(APPLICATION_KEY_RW_NUMBER, APPLICATION_KEY_RW_DES_DEFAULT);
-                if (success) {
-                    writeToUiAppend(output, logString + " SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    SESSION_KEY_DES = desfireAuthenticateLegacy.getSessionKey();
-                    writeToUiAppend(output, printData("the session key is", SESSION_KEY_DES));
-                    vibrateShort();
-                    // show logData
-
-                    // prepare data for export
-                    exportString = desfireAuthenticate.getLogData();
-                    exportStringFileName = "auth1d_ev2.html";
-                    writeToUiToast("your authentication log file is ready for export");
-
-                    //showDialog(MainActivity.this, desfireAuthenticateLegacy.getLogData());
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                    writeToUiAppend(output, desfireAuthenticateLegacy.getLogData());
-                }
-            }
-        });
-
-        // this method is using the Legacy/Proximity class
-        authD2D.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // authenticate with the read&write access key = 01...
-                clearOutputFields();
-                String logString = "authenticate with DEFAULT DES key number 0x02 = change access rights key";
-                writeToUiAppend(output, logString);
-                if (selectedApplicationId == null) {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
-                    return;
-                }
-                byte[] responseData = new byte[2];
-                // this is the authentication method from the NFCJLIB, working correctly
-                //boolean success = desfireAuthenticate.authenticateWithNfcjlibDes(APPLICATION_KEY_RW_NUMBER, APPLICATION_KEY_RW_DES_DEFAULT);
-                boolean success = desfireAuthenticateLegacy.authenticateD40(APPLICATION_KEY_CAR_NUMBER, APPLICATION_KEY_CAR_DES_DEFAULT);
-                if (success) {
-                    writeToUiAppend(output, logString + " SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    SESSION_KEY_DES = desfireAuthenticateLegacy.getSessionKey();
-                    writeToUiAppend(output, printData("the session key is", SESSION_KEY_DES));
-                    vibrateShort();
-                    // show logData
-
-                    // prepare data for export
-                    exportString = desfireAuthenticate.getLogData();
-                    exportStringFileName = "auth2d_ev2.html";
-                    writeToUiToast("your authentication log file is ready for export");
-
-                    //showDialog(MainActivity.this, desfireAuthenticateLegacy.getLogData());
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                    writeToUiAppend(output, desfireAuthenticateLegacy.getLogData());
-                }
-            }
-        });
-/*
-        authD2D.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // authenticate with the CAR key = 02...
-                clearOutputFields();
-                String logString = "authenticate with DEFAULT DES key number 0x02 = change access rights key";
-                writeToUiAppend(output, logString);
-                if (selectedApplicationId == null) {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
-                    return;
-                }
-                byte[] responseData = new byte[2];
-               // this is the authentication method from the NFCJLIB, working correctly
-                boolean success = desfireAuthenticate.authenticateWithNfcjlibDes(APPLICATION_KEY_CAR_NUMBER, APPLICATION_KEY_CAR_DES_DEFAULT);
-                if (success) {
-                    writeToUiAppend(output, logString + " SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    SESSION_KEY_DES = desfireAuthenticate.getSessionKey();
-                    writeToUiAppend(output, printData("the session key is", SESSION_KEY_DES));
-                    vibrateShort();
-                    // show logData
-                    showDialog(MainActivity.this, desfireAuthenticate.getLogData());
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                }
-            }
-        });
-*/
-        authD3D.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // authenticate with the read access key = 03...
-                clearOutputFields();
-                String logString = "authenticate with DEFAULT DES key number 0x03 = read access key";
-                writeToUiAppend(output, logString);
-                if (selectedApplicationId == null) {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
-                    return;
-                }
-                byte[] responseData = new byte[2];
-                // this is the authentication method from the NFCJLIB, working correctly
-                boolean success = desfireAuthenticate.authenticateWithNfcjlibDes(APPLICATION_KEY_R_NUMBER, APPLICATION_KEY_R_DES_DEFAULT);
-                if (success) {
-                    writeToUiAppend(output, logString + " SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    SESSION_KEY_DES = desfireAuthenticate.getSessionKey();
-                    writeToUiAppend(output, printData("the session key is", SESSION_KEY_DES));
-                    vibrateShort();
-                    // show logData
-
-                    // prepare data for export
-                    exportString = desfireAuthenticate.getLogData();
-                    exportStringFileName = "auth3d_ev2.html";
-                    writeToUiToast("your authentication log file is ready for export");
-
-                    //showDialog(MainActivity.this, desfireAuthenticate.getLogData());
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                }
-            }
-        });
-
-        authD4D.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // authenticate with the 4write access key = 04...
-                clearOutputFields();
-                String logString = "authenticate with DEFAULT DES key number 0x04 = write access key";
-                writeToUiAppend(output, logString);
-                if (selectedApplicationId == null) {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
-                    return;
-                }
-                byte[] responseData = new byte[2];
-                // this is the authentication method from the NFCJLIB, working correctly
-                boolean success = desfireAuthenticate.authenticateWithNfcjlibDes(APPLICATION_KEY_W_NUMBER, APPLICATION_KEY_W_DES_DEFAULT);
-                if (success) {
-                    writeToUiAppend(output, logString + " SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    SESSION_KEY_DES = desfireAuthenticate.getSessionKey();
-                    writeToUiAppend(output, printData("the session key is", SESSION_KEY_DES));
-                    vibrateShort();
-                    // show logData
-
-                    // prepare data for export
-                    exportString = desfireAuthenticate.getLogData();
-                    exportStringFileName = "auth4d_ev2.html";
-                    writeToUiToast("your authentication log file is ready for export");
-
-                    //showDialog(MainActivity.this, desfireAuthenticate.getLogData());
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                }
-            }
-        });
-
-        /**
-         * section for authentication with CHANGED DES key
-         */
-
-        // todo CHANGE this is using AES auth
-        authD0DC.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // authenticate with the application master access key = 00...
-                clearOutputFields();
-                String logString = "authenticate with DEFAULT AES key number 0x02 = CAR key";
-                writeToUiAppend(output, logString);
-                if (selectedApplicationId == null) {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
-                    return;
-                }
-                byte[] responseData = new byte[2];
-                // this is the authentication method from the NFCJLIB, working correctly
-                boolean success = desfireAuthenticate.authenticateWithNfcjlibAes(APPLICATION_KEY_CAR_NUMBER, APPLICATION_KEY_CAR_AES_DEFAULT);
-                if (success) {
-                    writeToUiAppend(output, logString + " SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    SESSION_KEY_AES = desfireAuthenticate.getSessionKey();
-                    writeToUiAppend(output, printData("the session key is", SESSION_KEY_AES));
-                    vibrateShort();
-                    // show logData
-
-                    // prepare data for export
-                    exportString = desfireAuthenticate.getLogData();
-                    exportStringFileName = "auth2a_nfcJ.html";
-                    writeToUiToast("your authentication log file is ready for export");
-
-                    //showDialog(MainActivity.this, desfireAuthenticate.getLogData());
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                }
-            }
-        });
-
-        // todo CHANGE this is using AES auth
-        authD1DC.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // authenticate with the read&write access key = 01...
-                clearOutputFields();
-                //String logString = "authenticate with CHANGED DES key number 0x01 = read & write access key";
-                String logString = "authenticate with DEFAULT AES key number 0x01 = read & write access key";
-                writeToUiAppend(output, logString);
-                if (selectedApplicationId == null) {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
-                    return;
-                }
-                byte[] responseData = new byte[2];
-
-                boolean success = desfireAuthenticateLegacy.authenticateAes(APPLICATION_KEY_RW_NUMBER, APPLICATION_KEY_RW_AES_DEFAULT);
-                if (success) {
-                    writeToUiAppend(output, logString + " SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    SESSION_KEY_AES = desfireAuthenticateLegacy.getSessionKey();
-                    IV = new byte[16]; // after a successful authentication the  IV is resetted to 16 zero bytes
-                    writeToUiAppend(output, printData("the session key is", SESSION_KEY_AES));
-                    vibrateShort();
-                    // show logData
-
-                    // prepare data for export
-                    exportString = desfireAuthenticateLegacy.getLogData();
-                    exportStringFileName = "auth2d_leg.html";
-                    writeToUiToast("your authentication log file is ready for export");
-
-                    //showDialog(MainActivity.this, desfireAuthenticateLegacy.getLogData());
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                }
-            }
-        });
-
-        // todo CHANGE - this is using AES auth
-        authD2DC.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // authenticate with the car key = 02...
-                clearOutputFields();
-                String logString = "authenticate with DEFAULT AES key number 0x02 = change access rights key";
-                writeToUiAppend(output, logString);
-                if (selectedApplicationId == null) {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
-                    return;
-                }
-                byte[] responseData = new byte[2];
-                // this is the authentication method from the NFCJLIB, working correctly
-                //boolean success = desfireAuthenticate.authenticateWithNfcjlibDes(APPLICATION_KEY_CAR_NUMBER, APPLICATION_KEY_CAR_DES);
-
-                boolean success = desfireAuthenticateLegacy.authenticateAes(APPLICATION_KEY_CAR_NUMBER, APPLICATION_KEY_CAR_AES_DEFAULT);
-                if (success) {
-                    writeToUiAppend(output, logString + " SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    SESSION_KEY_AES = desfireAuthenticateLegacy.getSessionKey();
-                    writeToUiAppend(output, printData("the session key is", SESSION_KEY_AES));
-                    vibrateShort();
-                    // show logData
-
-                    // prepare data for export
-                    exportString = desfireAuthenticateLegacy.getLogData();
-                    exportStringFileName = "auth2a_leg.html";
-                    writeToUiToast("your authentication log file is ready for export");
-
-                    //showDialog(MainActivity.this, desfireAuthenticateLegacy.getLogData());
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                }
-            }
-        });
-
-        // todo CHANGE: this is using AES EV2 First Authentication
-        authD3DC.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // authenticate with the read access key = 03...
-                clearOutputFields();
-                String logString = "authenticate with DEFAULT AES key number 0x02 = change access rights key";
-                writeToUiAppend(output, logString);
-                if (selectedApplicationId == null) {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
-                    return;
-                }
-                byte[] responseData = new byte[2];
-
-                boolean success = desfireAuthenticateEv2.authenticateAesEv2First(APPLICATION_KEY_CAR_NUMBER, APPLICATION_KEY_CAR_AES_DEFAULT);
-                if (success) {
-                    writeToUiAppend(output, logString + " SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    SESSION_KEY_AES = desfireAuthenticateLegacy.getSessionKey();
-                    writeToUiAppend(output, printData("the session key is", SESSION_KEY_AES));
-                    vibrateShort();
-                    // show logData
-
-                    // prepare data for export
-                    exportString = desfireAuthenticateLegacy.getLogData();
-                    exportStringFileName = "auth2a_ev2.html";
-                    writeToUiToast("your authentication log file is ready for export");
-
-                    //showDialog(MainActivity.this, desfireAuthenticateProximity.getLogData());
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                }
-            }
-        });
-
-        // todo CHANGE: this is using AES EV2 Non First Authentication
-        authD4DC.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // authenticate with the read access key = 03...
-                clearOutputFields();
-                String logString = "authenticate with DEFAULT AES key number 0x02 = change access rights key";
-                writeToUiAppend(output, logString);
-                if (selectedApplicationId == null) {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
-                    return;
-                }
-                // check that a previous successfull authentication with EV2First was run
-                boolean ev2FirstSuccess = desfireAuthenticateEv2.isAuthenticateEv2FirstSuccess();
-                if (!ev2FirstSuccess) {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to successfully run an 'authenticate EV2 First' before, aborted", COLOR_RED);
-                    return;
-                }
-
-                byte[] responseData = new byte[2];
-
-                boolean success = desfireAuthenticateEv2.authenticateAesEv2NonFirst(APPLICATION_KEY_CAR_NUMBER, APPLICATION_KEY_CAR_AES_DEFAULT);
-                if (success) {
-                    writeToUiAppend(output, logString + " SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    //SESSION_KEY_DES = desfireAuthenticateProximity.getSessionKey();
-                    // todo work with SesAuthENCKey
-                    //writeToUiAppend(output, printData("the session key is", SESSION_KEY_DES));
-                    vibrateShort();
-                    // show logData
-
-                    // prepare data for export
-                    exportString = desfireAuthenticate.getLogData();
-                    exportStringFileName = "auth2a_ev2.html";
-                    writeToUiToast("your authentication log file is ready for export");
-
-                    //showDialog(MainActivity.this, desfireAuthenticateProximity.getLogData());
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                }
-            }
-        });
-
-/*
-        authD0DC.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // authenticate with the application master access key = 00...
-                clearOutputFields();
-                String logString = "authenticate with CHANGED DES key number 0x00 = application master access key";
-                writeToUiAppend(output, logString);
-                if (selectedApplicationId == null) {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
-                    return;
-                }
-                byte[] responseData = new byte[2];
-                // this is the authentication method from the NFCJLIB, working correctly
-                boolean success = desfireAuthenticate.authenticateWithNfcjlibDes(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_DES);
-                if (success) {
-                    writeToUiAppend(output, logString + " SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    SESSION_KEY_DES = desfireAuthenticate.getSessionKey();
-                    writeToUiAppend(output, printData("the session key is", SESSION_KEY_DES));
-                    vibrateShort();
-                    // show logData
-                    showDialog(MainActivity.this, desfireAuthenticate.getLogData());
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                }
-            }
-        });
- */
-
-/*
-        authD2DC.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // authenticate with the car key = 02...
-                clearOutputFields();
-                String logString = "authenticate with CHANGED DES key number 0x02 = change access rights key";
-                writeToUiAppend(output, logString);
-                if (selectedApplicationId == null) {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
-                    return;
-                }
-                byte[] responseData = new byte[2];
-                // this is the authentication method from the NFCJLIB, working correctly
-                boolean success = desfireAuthenticate.authenticateWithNfcjlibDes(APPLICATION_KEY_CAR_NUMBER, APPLICATION_KEY_CAR_DES);
-                if (success) {
-                    writeToUiAppend(output, logString + " SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    SESSION_KEY_DES = desfireAuthenticate.getSessionKey();
-                    writeToUiAppend(output, printData("the session key is", SESSION_KEY_DES));
-                    vibrateShort();
-                    // show logData
-                    showDialog(MainActivity.this, desfireAuthenticate.getLogData());
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                }
-            }
-        });
-*/
-        /*
-        authD3DC.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // authenticate with the read access key = 03...
-                clearOutputFields();
-                String logString = "authenticate with CHANGED DES key number 0x03 = read access key";
-                writeToUiAppend(output, logString);
-                if (selectedApplicationId == null) {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
-                    return;
-                }
-                byte[] responseData = new byte[2];
-                // this is the authentication method from the NFCJLIB, working correctly
-                boolean success = desfireAuthenticate.authenticateWithNfcjlibDes(APPLICATION_KEY_R_NUMBER, APPLICATION_KEY_R_DES);
-                if (success) {
-                    writeToUiAppend(output, logString + " SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    SESSION_KEY_DES = desfireAuthenticate.getSessionKey();
-                    writeToUiAppend(output, printData("the session key is", SESSION_KEY_DES));
-                    vibrateShort();
-                    // show logData
-                    showDialog(MainActivity.this, desfireAuthenticate.getLogData());
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                }
-            }
-        });
-
-         */
-/*
-        authD4DC.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // authenticate with the write access key = 04...
-                clearOutputFields();
-                String logString = "authenticate with CHANGED DES key number 0x04 = write access key";
-                writeToUiAppend(output, logString);
-                if (selectedApplicationId == null) {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
-                    return;
-                }
-                byte[] responseData = new byte[2];
-                // this is the authentication method from the NFCJLIB, working correctly
-                boolean success = desfireAuthenticate.authenticateWithNfcjlibDes(APPLICATION_KEY_W_NUMBER, APPLICATION_KEY_W_DES);
-                if (success) {
-                    writeToUiAppend(output, logString + " SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    SESSION_KEY_DES = desfireAuthenticate.getSessionKey();
-                    writeToUiAppend(output, printData("the session key is", SESSION_KEY_DES));
-                    vibrateShort();
-                    // show logData
-                    showDialog(MainActivity.this, desfireAuthenticate.getLogData());
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                }
-            }
-        });
-
- */
 
 
         /**
@@ -2518,594 +2111,8 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
             }
         });
 
-        authDesVisualizing.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // authenticate with the read&write access key = 01...
-                clearOutputFields();
-                String logString = "DES visualizing authenticate with DEFAULT DES key number 0x01 = read & write access key";
-                writeToUiAppend(output, logString);
-                if (selectedApplicationId == null) {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
-                    return;
-                }
-                byte[] responseData = new byte[2];
-                // this is the authentication method from the NFCJLIB, working correctly
-                //boolean success = desfireAuthenticate.authenticateWithNfcjlibDes(APPLICATION_KEY_RW_NUMBER, APPLICATION_KEY_RW_DES_DEFAULT);
-                boolean success = desfireAuthenticateLegacy.authenticateD40(APPLICATION_KEY_RW_NUMBER, APPLICATION_KEY_RW_DES_DEFAULT);
-                if (success) {
-                    writeToUiAppend(output, logString + " SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    SESSION_KEY_DES = desfireAuthenticateLegacy.getSessionKey();
-                    writeToUiAppend(output, printData("the DES session key is", SESSION_KEY_DES));
-                    vibrateShort();
-                    // show logData
 
-                    // prepare data for export
-                    exportString = desfireAuthenticateLegacy.getLogData();
-                    exportStringFileName = "auth1d_ev2.html";
-                    writeToUiToast("your authentication log file is ready for export");
 
-                    //showDialog(MainActivity.this, desfireAuthenticateLegacy.getLogData());
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                    writeToUiAppend(output, desfireAuthenticateLegacy.getLogData());
-                }
-            }
-        });
-
-        authDesVisualizingC.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // authenticate with the read&write access key = 01...
-                clearOutputFields();
-                String logString = "DES visualizing authenticate with CHANGED DES key number 0x01 = read & write access key";
-                writeToUiAppend(output, logString);
-                if (selectedApplicationId == null) {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
-                    return;
-                }
-                byte[] responseData = new byte[2];
-                // this is the authentication method from the NFCJLIB, working correctly
-                //boolean success = desfireAuthenticate.authenticateWithNfcjlibDes(APPLICATION_KEY_RW_NUMBER, APPLICATION_KEY_RW_DES_DEFAULT);
-                boolean success = desfireAuthenticateLegacy.authenticateD40(APPLICATION_KEY_RW_NUMBER, APPLICATION_KEY_RW_DES);
-                if (success) {
-                    writeToUiAppend(output, logString + " SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    SESSION_KEY_DES = desfireAuthenticateLegacy.getSessionKey();
-                    writeToUiAppend(output, printData("the DES session key is", SESSION_KEY_DES));
-                    vibrateShort();
-                    // show logData
-
-                    // prepare data for export
-                    exportString = desfireAuthenticateLegacy.getLogData();
-                    Log.d(TAG, "exportString: " + exportString);
-                    exportStringFileName = "auth1d_ev2.html";
-                    writeToUiToast("your authentication log file is ready for export");
-
-                    //showDialog(MainActivity.this, desfireAuthenticateLegacy.getLogData());
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                    writeToUiAppend(output, desfireAuthenticateLegacy.getLogData());
-                }
-            }
-        });
-
-        authDesVisualizingC2.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // authenticate with the read&write access key = 01...
-                clearOutputFields();
-                String logString = "DES visualizing authenticate with CHANGED 2 DES key number 0x01 = read & write access key";
-                writeToUiAppend(output, logString);
-                if (selectedApplicationId == null) {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
-                    return;
-                }
-                byte[] responseData = new byte[2];
-                // this is the authentication method from the NFCJLIB, working correctly
-                //boolean success = desfireAuthenticate.authenticateWithNfcjlibDes(APPLICATION_KEY_RW_NUMBER, APPLICATION_KEY_RW_DES_DEFAULT);
-                boolean success = desfireAuthenticateLegacy.authenticateD40(APPLICATION_KEY_RW_NUMBER, APPLICATION_KEY_RW_DES_2);
-                if (success) {
-                    writeToUiAppend(output, logString + " SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    SESSION_KEY_DES = desfireAuthenticateLegacy.getSessionKey();
-                    writeToUiAppend(output, printData("the DES session key is", SESSION_KEY_DES));
-                    vibrateShort();
-                    // show logData
-
-                    // prepare data for export
-                    exportString = desfireAuthenticateLegacy.getLogData();
-                    exportStringFileName = "auth1d_ev2.html";
-                    writeToUiToast("your authentication log file is ready for export");
-
-                    //showDialog(MainActivity.this, desfireAuthenticateLegacy.getLogData());
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                    writeToUiAppend(output, desfireAuthenticateLegacy.getLogData());
-                }
-            }
-        });
-
-        readDesVisualizing.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                clearOutputFields();
-                String logString = "DES visualizing read from an encrypted standard file";
-                writeToUiAppend(output, logString);
-                // check that a file was selected before
-                selectedFileId = "1";
-                fileSelected.setText("1");
-
-                if (TextUtils.isEmpty(selectedFileId)) {
-                    writeToUiAppend(output, "You need to select a file first, aborted");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE", COLOR_RED);
-                    return;
-                }
-                byte fileIdByte = Byte.parseByte(selectedFileId);
-                byte[] responseData = new byte[2];
-                byte[] result = desfireAuthenticateLegacy.readFromAStandardFileEncipheredCommunicationDes(fileIdByte, selectedFileSize);
-                responseData = desfireAuthenticateLegacy.getErrorCode();
-                Log.d(TAG, desfireAuthenticateLegacy.getLogData());
-                if (result == null) {
-                    // something gone wrong
-                    writeToUiAppend(output, logString + " FAILURE with error " + EV3.getErrorCode(responseData));
-                    if (checkResponseMoreData(responseData)) {
-                        writeToUiAppend(output, "the file is too long to read, sorry");
-                    }
-                    if (checkAuthenticationError(responseData)) {
-                        writeToUiAppend(output, "as we received an Authentication Error - did you forget to AUTHENTICATE with a READ ACCESS KEY ?");
-                    }
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                    return;
-                } else {
-                    writeToUiAppend(output, logString + " ID: " + fileIdByte + printData(" data", result));
-                    writeToUiAppend(output, logString + " ID: " + fileIdByte + " data: " + new String(result, StandardCharsets.UTF_8));
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    vibrateShort();
-                }
-            }
-        });
-
-        writeDesVisualizing.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                clearOutputFields();
-                String logString = "DES visualizing write to an encrypted standard file";
-                writeToUiAppend(output, logString);
-                // check that a file was selected before
-
-                selectedFileId = "1";
-                fileSelected.setText("1");
-                selectedFileSize = 32;
-
-                if (TextUtils.isEmpty(selectedFileId)) {
-                    writeToUiAppend(output, "You need to select a file first, aborted");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE", COLOR_RED);
-                    return;
-                }
-
-                // we are writing an timestamp to the standard file
-                String dataToWrite = Utils.getTimestamp();
-                /*
-                String dataToWrite = fileStandardData.getText().toString();
-                if (TextUtils.isEmpty(dataToWrite)) {
-                    //writeToUiAppend(errorCode, "please enter some data to write");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "please enter some data to write", COLOR_RED);
-                    return;
-                }
-
-                 */
-                byte[] dataToWriteBytes = dataToWrite.getBytes(StandardCharsets.UTF_8);
-
-                // create an empty array and copy the dataToWrite to clear the complete standard file
-                byte[] fullDataToWrite = new byte[selectedFileSize];
-                System.arraycopy(dataToWriteBytes, 0, fullDataToWrite, 0, dataToWriteBytes.length);
-
-                byte fileIdByte = Byte.parseByte(selectedFileId);
-                byte[] responseData = new byte[2];
-                boolean success = desfireAuthenticateLegacy.writeToAStandardFileEncipheredCommunicationDes(fileIdByte, fullDataToWrite);
-                responseData = desfireAuthenticateLegacy.getErrorCode();
-                Log.d(TAG, desfireAuthenticateLegacy.getLogData());
-                if (success) {
-                    writeToUiAppend(output, logString + " SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    vibrateShort();
-                } else {
-                    writeToUiAppend(output, logString + " FAILURE with error " + EV3.getErrorCode(responseData));
-                    if (checkAuthenticationError(responseData)) {
-                        writeToUiAppend(output, "as we received an Authentication Error - did you forget to AUTHENTICATE with a WRITE ACCESS KEY ?");
-                    }
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                }
-            }
-        });
-
-        changeKeyDes01ToChangedDesVisualizing.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // this method will change the key number 1 (read&write access) from default to D100...
-                clearOutputFields();
-                String logString = "DES visualizing change key 1 read&write access to CHANGED";
-                writeToUiAppend(output, logString);
-
-                byte[] responseData = new byte[2];
-                writeToUiAppend(output, "changeKeyDes: "
-                        + Utils.byteToHex(APPLICATION_KEY_RW_NUMBER)
-                        + " from " + printData("oldValue", APPLICATION_KEY_RW_DES_DEFAULT)
-                        + " to " + printData("newValue", APPLICATION_KEY_RW_DES));
-
-                // select the application
-                writeToUiAppend(output, "step 1: select the application");
-                byte[] applicationIdentifier = hexStringToByteArray("0100D0"); // lsb
-                applicationId.setText("D00001");
-                writeToUiAppend(output, "select the application with id: " + applicationId.getText().toString());
-                boolean success = desfireAuthenticateLegacy.selectApplication(applicationIdentifier);
-                responseData = desfireAuthenticateLegacy.getErrorCode();
-                if (success) {
-                    writeToUiAppend(output, "select the application SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "select the application SUCCESS", COLOR_GREEN);
-                    vibrateShort();
-                } else {
-                    writeToUiAppend(output, logString + " FAILURE with error " + EV3.getErrorCode(responseData));
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "select the application FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                    return;
-                }
-
-                // before we are running an auth with key 0 (application master key)
-                writeToUiAppend(output, "step 2: authenticate with the app MASTER key");
-                success = desfireAuthenticateLegacy.authenticateD40(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_DES_DEFAULT);
-                //boolean success = desfireAuthenticateLegacy.authenticateD40(APPLICATION_KEY_CAR_NUMBER, APPLICATION_KEY_CAR_DES_DEFAULT);
-                if (success) {
-                    writeToUiAppend(output, "auth with app MASTER key SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "auth with app MASTER key SUCCESS", COLOR_GREEN);
-                    SESSION_KEY_DES = desfireAuthenticateLegacy.getSessionKey();
-                    KEY_NUMBER_USED_FOR_AUTHENTICATION = APPLICATION_KEY_MASTER_NUMBER;
-                    writeToUiAppend(output, printData("the DES session key is", SESSION_KEY_DES));
-                    vibrateShort();
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "auth with app MASTER key FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                    writeToUiAppend(output, desfireAuthenticateLegacy.getLogData());
-                    return;
-                }
-
-                // now change the key
-                writeToUiAppend(output, "step 3: change key 1 to CHANGED");
-                success = desfireAuthenticateLegacy.changeDesKey(KEY_NUMBER_USED_FOR_AUTHENTICATION, APPLICATION_KEY_RW_NUMBER, APPLICATION_KEY_RW_DES, APPLICATION_KEY_RW_DES_DEFAULT, "read&write access");
-                responseData = desfireAuthenticateLegacy.getErrorCode();
-                Log.d(TAG, desfireAuthenticateLegacy.getLogData());
-
-                if (success) {
-                    writeToUiAppend(output, "change key 1 to CHANGED SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "change key 1 to CHANGED SUCCESS", COLOR_GREEN);
-                    vibrateShort();
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "change key 1 to CHANGED FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                    return;
-                }
-            }
-        });
-
-        changeKeyDes01ToDefaultDesVisualizing.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // this method will change the key number 1 (read&write access) from changed to DEFAULT
-                clearOutputFields();
-                String logString = "DES visualizing change key 1 read&write access to DEFAULT";
-                writeToUiAppend(output, logString);
-
-                byte[] responseData = new byte[2];
-                writeToUiAppend(output, "changeKeyDes: "
-                        + Utils.byteToHex(APPLICATION_KEY_RW_NUMBER)
-                        + " from " + printData("oldValue", APPLICATION_KEY_RW_DES)
-                        + " to " + printData("newValue", APPLICATION_KEY_RW_DES_DEFAULT));
-
-                // select the application
-                writeToUiAppend(output, "step 1: select the application");
-                byte[] applicationIdentifier = hexStringToByteArray("0100D0"); // lsb
-                applicationId.setText("D00001");
-                writeToUiAppend(output, "select the application with id: " + applicationId.getText().toString());
-                boolean success = desfireAuthenticateLegacy.selectApplication(applicationIdentifier);
-                responseData = desfireAuthenticateLegacy.getErrorCode();
-                if (success) {
-                    writeToUiAppend(output, "select the application SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "select the application SUCCESS", COLOR_GREEN);
-                    vibrateShort();
-                } else {
-                    writeToUiAppend(output, logString + " FAILURE with error " + EV3.getErrorCode(responseData));
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "select the application FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                    return;
-                }
-
-                // before we are running an auth with key 0 (application master key)
-                writeToUiAppend(output, "step 2: authenticate with the app MASTER key");
-                success = desfireAuthenticateLegacy.authenticateD40(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_DES_DEFAULT);
-                //boolean success = desfireAuthenticateLegacy.authenticateD40(APPLICATION_KEY_CAR_NUMBER, APPLICATION_KEY_CAR_DES_DEFAULT);
-                if (success) {
-                    writeToUiAppend(output, "auth with app MASTER key SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "auth with app MASTER key SUCCESS", COLOR_GREEN);
-                    SESSION_KEY_DES = desfireAuthenticateLegacy.getSessionKey();
-                    KEY_NUMBER_USED_FOR_AUTHENTICATION = APPLICATION_KEY_MASTER_NUMBER;
-                    writeToUiAppend(output, printData("the DES session key is", SESSION_KEY_DES));
-                    vibrateShort();
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "auth with app MASTER key FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                    writeToUiAppend(output, desfireAuthenticateLegacy.getLogData());
-                    return;
-                }
-
-                // now change the key
-                writeToUiAppend(output, "step 3: change key 1 to DEFAULT");
-                success = desfireAuthenticateLegacy.changeDesKey(KEY_NUMBER_USED_FOR_AUTHENTICATION, APPLICATION_KEY_RW_NUMBER, APPLICATION_KEY_RW_DES_DEFAULT, APPLICATION_KEY_RW_DES, "read&write access");
-                responseData = desfireAuthenticateLegacy.getErrorCode();
-                Log.d(TAG, desfireAuthenticateLegacy.getLogData());
-                if (success) {
-                    writeToUiAppend(output, "change key 1 to DEFAULT SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "change key 1 to DEFAULT SUCCESS", COLOR_GREEN);
-                    vibrateShort();
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "change key 1 to DEFAULT FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                    return;
-                }
-            }
-        });
-
-        changeKeyDes01ToChanged2DesVisualizing.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // this method will change the key number 1 (read&write access) from default to D100...
-                clearOutputFields();
-                String logString = "DES visualizing change key 1 read&write access from CHANGED to CHANGED 2";
-                writeToUiAppend(output, logString);
-
-                byte[] responseData = new byte[2];
-                writeToUiAppend(output, "changeKeyDes: "
-                        + Utils.byteToHex(APPLICATION_KEY_RW_NUMBER)
-                        + " from " + printData("oldValue", APPLICATION_KEY_RW_DES)
-                        + " to " + printData("newValue", APPLICATION_KEY_RW_DES_2));
-
-                // select the application
-                writeToUiAppend(output, "step 1: select the application");
-                byte[] applicationIdentifier = hexStringToByteArray("0100D0"); // lsb
-                applicationId.setText("D00001");
-                writeToUiAppend(output, "select the application with id: " + applicationId.getText().toString());
-                boolean success = desfireAuthenticateLegacy.selectApplication(applicationIdentifier);
-                responseData = desfireAuthenticateLegacy.getErrorCode();
-                if (success) {
-                    writeToUiAppend(output, "select the application SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "select the application SUCCESS", COLOR_GREEN);
-                    vibrateShort();
-                } else {
-                    writeToUiAppend(output, logString + " FAILURE with error " + EV3.getErrorCode(responseData));
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "select the application FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                    return;
-                }
-
-                // before we are running an auth with key 0 (application master key)
-                writeToUiAppend(output, "step 2: authenticate with the app MASTER key");
-                success = desfireAuthenticateLegacy.authenticateD40(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_DES_DEFAULT);
-                //boolean success = desfireAuthenticateLegacy.authenticateD40(APPLICATION_KEY_CAR_NUMBER, APPLICATION_KEY_CAR_DES_DEFAULT);
-                if (success) {
-                    writeToUiAppend(output, "auth with app MASTER key SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "auth with app MASTER key SUCCESS", COLOR_GREEN);
-                    SESSION_KEY_DES = desfireAuthenticateLegacy.getSessionKey();
-                    KEY_NUMBER_USED_FOR_AUTHENTICATION = APPLICATION_KEY_MASTER_NUMBER;
-                    writeToUiAppend(output, printData("the DES session key is", SESSION_KEY_DES));
-                    vibrateShort();
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "auth with app MASTER key FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                    writeToUiAppend(output, desfireAuthenticateLegacy.getLogData());
-                    return;
-                }
-
-                // now change the key
-                writeToUiAppend(output, "step 3: change key 1 to CHANGED 2");
-                success = desfireAuthenticateLegacy.changeDesKey(KEY_NUMBER_USED_FOR_AUTHENTICATION, APPLICATION_KEY_RW_NUMBER, APPLICATION_KEY_RW_DES_2, APPLICATION_KEY_RW_DES, "read&write access");
-                responseData = desfireAuthenticateLegacy.getErrorCode();
-                Log.d(TAG, desfireAuthenticateLegacy.getLogData());
-
-                if (success) {
-                    writeToUiAppend(output, "change key 1 to CHANGED 2 SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "change key 1 to CHANGED SUCCESS", COLOR_GREEN);
-                    vibrateShort();
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "change key 1 to CHANGED 2 FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                    return;
-                }
-            }
-        });
-
-        changeKeyDes01ToDefault2DesVisualizing.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // this method will change the key number 1 (read&write access) from changed to DEFAULT
-                clearOutputFields();
-                String logString = "DES visualizing change key 1 read&write access from CHANGED 2 to DEFAULT";
-                writeToUiAppend(output, logString);
-
-                byte[] responseData = new byte[2];
-                writeToUiAppend(output, "changeKeyDes: "
-                        + Utils.byteToHex(APPLICATION_KEY_RW_NUMBER)
-                        + " from " + printData("oldValue", APPLICATION_KEY_RW_DES_2)
-                        + " to " + printData("newValue", APPLICATION_KEY_RW_DES_DEFAULT));
-
-                // select the application
-                writeToUiAppend(output, "step 1: select the application");
-                byte[] applicationIdentifier = hexStringToByteArray("0100D0"); // lsb
-                applicationId.setText("D00001");
-                writeToUiAppend(output, "select the application with id: " + applicationId.getText().toString());
-                boolean success = desfireAuthenticateLegacy.selectApplication(applicationIdentifier);
-                responseData = desfireAuthenticateLegacy.getErrorCode();
-                if (success) {
-                    writeToUiAppend(output, "select the application SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "select the application SUCCESS", COLOR_GREEN);
-                    vibrateShort();
-                } else {
-                    writeToUiAppend(output, logString + " FAILURE with error " + EV3.getErrorCode(responseData));
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "select the application FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                    return;
-                }
-
-                // before we are running an auth with key 0 (application master key)
-                writeToUiAppend(output, "step 2: authenticate with the app MASTER key");
-                success = desfireAuthenticateLegacy.authenticateD40(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_DES_DEFAULT);
-                //boolean success = desfireAuthenticateLegacy.authenticateD40(APPLICATION_KEY_CAR_NUMBER, APPLICATION_KEY_CAR_DES_DEFAULT);
-                if (success) {
-                    writeToUiAppend(output, "auth with app MASTER key SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "auth with app MASTER key SUCCESS", COLOR_GREEN);
-                    SESSION_KEY_DES = desfireAuthenticateLegacy.getSessionKey();
-                    KEY_NUMBER_USED_FOR_AUTHENTICATION = APPLICATION_KEY_MASTER_NUMBER;
-                    writeToUiAppend(output, printData("the DES session key is", SESSION_KEY_DES));
-                    vibrateShort();
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "auth with app MASTER key FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                    writeToUiAppend(output, desfireAuthenticateLegacy.getLogData());
-                    return;
-                }
-
-                // now change the key
-                writeToUiAppend(output, "step 3: change key 1 to DEFAULT");
-                success = desfireAuthenticateLegacy.changeDesKey(KEY_NUMBER_USED_FOR_AUTHENTICATION, APPLICATION_KEY_RW_NUMBER, APPLICATION_KEY_RW_DES_DEFAULT, APPLICATION_KEY_RW_DES_2, "read&write access");
-                responseData = desfireAuthenticateLegacy.getErrorCode();
-                Log.d(TAG, desfireAuthenticateLegacy.getLogData());
-                if (success) {
-                    writeToUiAppend(output, "change key 1 to DEFAULT SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "change key 1 to DEFAULT SUCCESS", COLOR_GREEN);
-                    vibrateShort();
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "change key 1 to DEFAULT FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                    return;
-                }
-            }
-        });
-
-        changeKeyDes00ToChangedDesVisualizing.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // this method will change the key number 0 (master) from default to D100...
-                clearOutputFields();
-                String logString = "DES visualizing change key 0 app Master to CHANGED";
-                writeToUiAppend(output, logString);
-
-                byte[] responseData = new byte[2];
-                writeToUiAppend(output, "changeKeyDes: "
-                        + Utils.byteToHex(APPLICATION_KEY_MASTER_NUMBER)
-                        + " from " + printData("oldValue", APPLICATION_KEY_MASTER_DES_DEFAULT)
-                        + " to " + printData("newValue", APPLICATION_KEY_MASTER_DES));
-
-                // select the application
-                writeToUiAppend(output, "step 1: select the application");
-                byte[] applicationIdentifier = hexStringToByteArray("0100D0"); // lsb
-                applicationId.setText("D00001");
-                writeToUiAppend(output, "select the application with id: " + applicationId.getText().toString());
-                boolean success = desfireAuthenticateLegacy.selectApplication(applicationIdentifier);
-                responseData = desfireAuthenticateLegacy.getErrorCode();
-                if (success) {
-                    writeToUiAppend(output, "select the application SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "select the application SUCCESS", COLOR_GREEN);
-                    vibrateShort();
-                } else {
-                    writeToUiAppend(output, logString + " FAILURE with error " + EV3.getErrorCode(responseData));
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "select the application FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                    return;
-                }
-
-                // before we are running an auth with key 0 (application master key)
-                writeToUiAppend(output, "step 2: authenticate with the app MASTER key");
-                success = desfireAuthenticateLegacy.authenticateD40(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_DES_DEFAULT);
-                //boolean success = desfireAuthenticateLegacy.authenticateD40(APPLICATION_KEY_CAR_NUMBER, APPLICATION_KEY_CAR_DES_DEFAULT);
-                if (success) {
-                    writeToUiAppend(output, "auth with app MASTER key SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "auth with app MASTER key SUCCESS", COLOR_GREEN);
-                    SESSION_KEY_DES = desfireAuthenticateLegacy.getSessionKey();
-                    KEY_NUMBER_USED_FOR_AUTHENTICATION = APPLICATION_KEY_MASTER_NUMBER;
-                    writeToUiAppend(output, printData("the DES session key is", SESSION_KEY_DES));
-                    vibrateShort();
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "auth with app MASTER key FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                    writeToUiAppend(output, desfireAuthenticateLegacy.getLogData());
-                    return;
-                }
-
-                // now change the key
-                writeToUiAppend(output, "step 3: change key 0 to CHANGED");
-                success = desfireAuthenticateLegacy.changeDesKey(KEY_NUMBER_USED_FOR_AUTHENTICATION, APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_DES, APPLICATION_KEY_MASTER_DES_DEFAULT, "app master");
-                responseData = desfireAuthenticateLegacy.getErrorCode();
-                Log.d(TAG, desfireAuthenticateLegacy.getLogData());
-                if (success) {
-                    writeToUiAppend(output, "change key 0 to CHANGED SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "change key 0 to CHANGED SUCCESS", COLOR_GREEN);
-                    vibrateShort();
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "change key 0 to CHANGED FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                    return;
-                }
-            }
-        });
-
-        changeKeyDes00ToDefaultDesVisualizing.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // this method will change the key number 0 (application master) from changed to DEFAULT
-                clearOutputFields();
-                String logString = "DES visualizing change key 0 application master to DEFAULT";
-                writeToUiAppend(output, logString);
-
-                byte[] responseData = new byte[2];
-                writeToUiAppend(output, "changeKeyDes: "
-                        + Utils.byteToHex(APPLICATION_KEY_MASTER_NUMBER)
-                        + " from " + printData("oldValue", APPLICATION_KEY_MASTER_DES)
-                        + " to " + printData("newValue", APPLICATION_KEY_MASTER_DES_DEFAULT));
-
-                // select the application
-                writeToUiAppend(output, "step 1: select the application");
-                byte[] applicationIdentifier = hexStringToByteArray("0100D0"); // lsb
-                applicationId.setText("D00001");
-                writeToUiAppend(output, "select the application with id: " + applicationId.getText().toString());
-                boolean success = desfireAuthenticateLegacy.selectApplication(applicationIdentifier);
-                responseData = desfireAuthenticateLegacy.getErrorCode();
-                if (success) {
-                    writeToUiAppend(output, "select the application SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "select the application SUCCESS", COLOR_GREEN);
-                    vibrateShort();
-                } else {
-                    writeToUiAppend(output, logString + " FAILURE with error " + EV3.getErrorCode(responseData));
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "select the application FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                    return;
-                }
-
-                // before we are running an auth with key 0 (application master key)
-                writeToUiAppend(output, "step 2: authenticate with the CHANGED app MASTER key");
-                success = desfireAuthenticateLegacy.authenticateD40(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_DES);
-                //boolean success = desfireAuthenticateLegacy.authenticateD40(APPLICATION_KEY_CAR_NUMBER, APPLICATION_KEY_CAR_DES_DEFAULT);
-                if (success) {
-                    writeToUiAppend(output, "auth with app MASTER key SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "auth with app MASTER key SUCCESS", COLOR_GREEN);
-                    SESSION_KEY_DES = desfireAuthenticateLegacy.getSessionKey();
-                    KEY_NUMBER_USED_FOR_AUTHENTICATION = APPLICATION_KEY_MASTER_NUMBER;
-                    writeToUiAppend(output, printData("the DES session key is", SESSION_KEY_DES));
-                    vibrateShort();
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "auth with app MASTER key FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                    writeToUiAppend(output, desfireAuthenticateLegacy.getLogData());
-                    return;
-                }
-
-                // now change the key
-                writeToUiAppend(output, "step 3: change key 0 to DEFAULT");
-                success = desfireAuthenticateLegacy.changeDesKey(KEY_NUMBER_USED_FOR_AUTHENTICATION, APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_DES_DEFAULT, APPLICATION_KEY_MASTER_DES, "app master");
-                responseData = desfireAuthenticateLegacy.getErrorCode();
-                Log.d(TAG, desfireAuthenticateLegacy.getLogData());
-                if (success) {
-                    writeToUiAppend(output, "change key 0 to DEFAULT SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "change key 0 to DEFAULT SUCCESS", COLOR_GREEN);
-                    vibrateShort();
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "change key 0 to DEFAULT FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                    return;
-                }
-            }
-        });
 
         getKeyVersion.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -3565,7 +2572,58 @@ C1h =
             }
         });
 
+    }
 
+    private boolean runAuthentication(byte applicationKeyNumber, byte[] applicationKey) {
+        final String methodName = "runAuthentication";
+        writeToUiAppend(output, methodName);
+        // sanity checks
+        if (selectedApplicationId == null) {
+            writeToUiAppend(output, "you need to select an application first, aborted");
+            writeToUiAppendBorderColor(errorCode, errorCodeLayout, methodName + " FAILURE", COLOR_RED);
+            return false;
+        }
+        if ((applicationKeyNumber < (byte) 0x00) || (applicationKeyNumber > (byte) 0x04)) {
+            writeToUiAppend(output, "applicationKeyNumber is not in range 0..4, aborted");
+            writeToUiAppendBorderColor(errorCode, errorCodeLayout, methodName + " FAILURE", COLOR_RED);
+            return false;
+        }
+        if ((applicationKey == null) || (applicationKey.length != 16)) {
+            writeToUiAppend(output, "applicationKey is NULL or not of length 16, aborted");
+            writeToUiAppendBorderColor(errorCode, errorCodeLayout, methodName + " FAILURE", COLOR_RED);
+            return false;
+        }
+        writeToUiAppend(output, methodName + " with keyNumber " + applicationKeyNumber + printData(" key", applicationKey));
+
+        byte[] responseData = new byte[2];
+        boolean success = ntag424DnaMethods.authenticateAesEv2First(applicationKeyNumber, applicationKey);
+        responseData = ntag424DnaMethods.getErrorCode();
+        if (success) {
+            writeToUiAppend(output, methodName + " SUCCESS");
+            writeToUiAppendBorderColor(errorCode, errorCodeLayout, methodName + " SUCCESS", COLOR_GREEN);
+            SES_AUTH_ENC_KEY = ntag424DnaMethods.getSesAuthENCKey();
+            SES_AUTH_MAC_KEY = ntag424DnaMethods.getSesAuthMACKey();
+            TRANSACTION_IDENTIFIER = ntag424DnaMethods.getTransactionIdentifier();
+            CMD_COUNTER = ntag424DnaMethods.getCmdCounter();
+            writeToUiAppend(output, printData("SES_AUTH_ENC_KEY", SES_AUTH_ENC_KEY));
+            writeToUiAppend(output, printData("SES_AUTH_MAC_KEY", SES_AUTH_MAC_KEY));
+            writeToUiAppend(output, printData("TRANSACTION_IDENTIFIER", TRANSACTION_IDENTIFIER));
+            writeToUiAppend(output, "CMD_COUNTER: " + CMD_COUNTER);
+            writeToUiAppend(output, "key used for auth: " + ntag424DnaMethods.getKeyNumberUsedForAuthentication());
+            vibrateShort();
+
+            // prepare data for export
+            exportString = ntag424DnaMethods.getLogData();
+            exportStringFileName = "auth_" + applicationKeyNumber + ".html";
+            writeToUiToast("your authentication log file is ready for export");
+            return true;
+            // show logData
+            //showDialog(MainActivity.this, desfireAuthenticateProximity.getLogData());
+        } else {
+            String errorName = ntag424DnaMethods.getErrorCodeReason();
+            writeToUiAppendBorderColor(errorCode, errorCodeLayout, methodName + " FAILURE with error code: " + errorName, COLOR_RED);
+            return false;
+        }
     }
 
     /**
