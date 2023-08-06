@@ -1615,8 +1615,10 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
             @Override
             public void onClick(View view) {
                 clearOutputFields();
-                String logString = "change the fileSettings of a file";
+                String logString = "change the fileSettings file 03 (fixed)";
                 writeToUiAppend(output, logString);
+
+                /*
                 // check that a file was selected before
                 if (TextUtils.isEmpty(selectedFileId)) {
                     writeToUiAppend(output, "You need to select a file first, aborted");
@@ -1624,9 +1626,31 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                     return;
                 }
                 byte fileIdByte = Byte.parseByte(selectedFileId);
+                 */
+
+                if (selectedApplicationId == null) {
+                    writeToUiAppend(output, "you need to select an application first, aborted");
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE", COLOR_RED);
+                    return;
+                }
+                byte fileIdByte = STANDARD_FILE_ENCRYPTED_NUMBER;
+/*
+fileNumber: 03
+fileType: 0 (Standard)
+communicationSettings: 03 (Encrypted)
+accessRights RW | CAR: 30
+accessRights R  | W:   23
+accessRights RW:       3
+accessRights CAR:      0
+accessRights R:        2
+accessRights W:        3
+fileSize: 128
+ */
                 byte[] responseData = new byte[2];
-                boolean success = desfireAuthenticateLegacy.changeFileSettings(fileIdByte);
-                responseData = desfireAuthenticateLegacy.getErrorCode();
+
+                boolean success = ntag424DnaMethods.changeFileSettings(fileIdByte, Ntag424DnaMethods.CommunicationSettings.Full, 3,0, 2, 3, false);
+                //boolean success = ntag424DnaMethods.changeFileSettings(fileIdByte, Ntag424DnaMethods.CommunicationSettings.Full, 1,2, 3, 4, false);
+                responseData = ntag424DnaMethods.getErrorCode();
                 if (success) {
                     writeToUiAppend(output, logString + " SUCCESS");
                     writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);

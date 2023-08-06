@@ -345,7 +345,7 @@ public class Ntag424DnaMethods {
         }
     }
 
-    public boolean changeFileSettings(byte fileNumber, CommunicationSettings communicationSettings, int keyRW, int keyCar, int keyR, int keyW, int fileSize, boolean sdmEnable) {
+    public boolean changeFileSettings(byte fileNumber, CommunicationSettings communicationSettings, int keyRW, int keyCar, int keyR, int keyW, boolean sdmEnable) {
 
         // this method can only enable Secure Dynamic Message but cannot set specific data like offsets
         // see NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf pages 34 - 35 for SDM example
@@ -412,11 +412,6 @@ public class Ntag424DnaMethods {
         if ((keyW > 4) & (keyW != 14) & (keyW != 15)) {
             errorCode = RESPONSE_PARAMETER_ERROR.clone();
             errorCodeReason = "keyW is > 4 but not 14 or 15, aborted";
-            return false;
-        }
-        if ((fileSize < 1) || (fileSize > 256)) {
-            errorCode = RESPONSE_PARAMETER_ERROR.clone();
-            errorCodeReason = "fileSize is < 1 or > 256, aborted";
             return false;
         }
         if ((isoDep == null) || (!isoDep.isConnected())) {
@@ -497,20 +492,18 @@ fileSize: 128
         byte[] ivForCmdData = AES.encrypt(startingIv, SesAuthENCKey, ivInput);
         log(methodName, printData("ivForCmdData", ivForCmdData));
 
-        // command data
+        // build the command data
         byte communicationSettingsByte = (byte) 0x00;
         if (communicationSettings.name().equals(CommunicationSettings.Plain.name())) communicationSettingsByte = (byte) 0x00;
         if (communicationSettings.name().equals(CommunicationSettings.MACed.name())) communicationSettingsByte = (byte) 0x01;
         if (communicationSettings.name().equals(CommunicationSettings.Full.name())) communicationSettingsByte = (byte) 0x03;
         byte accessRightsRwCar = (byte) ((keyRW << 4) | (keyCar & 0x0F)); // Read&Write Access & ChangeAccessRights
         byte accessRightsRW = (byte) ((keyR << 4) | (keyW & 0x0F)) ; // Read Access & Write Access
-        byte[] fileSizeByte = Utils.intTo3ByteArrayInversed(fileSize);
         ByteArrayOutputStream baosCommandData = new ByteArrayOutputStream();
-        baosCommandData.write((byte) 0x00); // fileType 00, fixed
-        baosCommandData.write(communicationSettingsByte);
+        //baosCommandData.write((byte) 0x00); // fileType 00, fixed
+        baosCommandData.write(communicationSettingsByte); // this is the  fileOptions byte
         baosCommandData.write(accessRightsRwCar);
         baosCommandData.write(accessRightsRW);
-        baosCommandData.write(fileSizeByte, 0, fileSizeByte.length);
         byte[] commandData = baosCommandData.toByteArray();
 
         // build the cmdData, is a bit complex due to a lot of options - here it is shortened
