@@ -178,7 +178,7 @@ public class Ntag424DnaMethods {
     private static final byte[] PADDING_FULL = hexStringToByteArray("80000000000000000000000000000000");
 
     public enum CommunicationSettings {
-        Plain, MACed, Encrypted
+        Plain, MACed, Full
     }
 
     public Ntag424DnaMethods(TextView textView, Tag tag, Activity activity) {
@@ -345,7 +345,7 @@ public class Ntag424DnaMethods {
         }
     }
 
-    public boolean changeFileSettings(byte fileNumber, CommunicationSettings communicationSettings, int keyRW, int keyCar, int keyR, int keyW, boolean sdmEnable) {
+    public boolean changeFileSettings(byte fileNumber, CommunicationSettings communicationSettings, int keyRW, int keyCar, int keyR, int keyW, int fileSize, boolean sdmEnable) {
 
         // this method can only enable Secure Dynamic Message but cannot set specific data like offsets
         // see NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf pages 34 - 35 for SDM example
@@ -381,7 +381,7 @@ public class Ntag424DnaMethods {
         }
         if ((keyRW > 4) & (keyRW != 14) & (keyRW != 15)) {
             errorCode = RESPONSE_PARAMETER_ERROR.clone();
-            errorCodeReason = "keyRW is > > 4 but not 14 or 15, aborted";
+            errorCodeReason = "keyRW is > 4 but not 14 or 15, aborted";
             return false;
         }
         if (keyCar < 0) {
@@ -391,7 +391,7 @@ public class Ntag424DnaMethods {
         }
         if ((keyCar > 4) & (keyCar != 14) & (keyCar != 15)) {
             errorCode = RESPONSE_PARAMETER_ERROR.clone();
-            errorCodeReason = "keyCar is > > 4 but not 14 or 15, aborted";
+            errorCodeReason = "keyCar is > 4 but not 14 or 15, aborted";
             return false;
         }
         if (keyR < 0) {
@@ -401,7 +401,7 @@ public class Ntag424DnaMethods {
         }
         if ((keyR > 4) & (keyR != 14) & (keyR != 15)) {
             errorCode = RESPONSE_PARAMETER_ERROR.clone();
-            errorCodeReason = "keyR is > > 4 but not 14 or 15, aborted";
+            errorCodeReason = "keyR is > 4 but not 14 or 15, aborted";
             return false;
         }
         if (keyW < 0) {
@@ -411,7 +411,12 @@ public class Ntag424DnaMethods {
         }
         if ((keyW > 4) & (keyW != 14) & (keyW != 15)) {
             errorCode = RESPONSE_PARAMETER_ERROR.clone();
-            errorCodeReason = "keyW is > > 4 but not 14 or 15, aborted";
+            errorCodeReason = "keyW is > 4 but not 14 or 15, aborted";
+            return false;
+        }
+        if ((fileSize < 1) || (fileSize > 256)) {
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "fileSize is < 1 or > 256, aborted";
             return false;
         }
         if ((isoDep == null) || (!isoDep.isConnected())) {
@@ -424,6 +429,53 @@ public class Ntag424DnaMethods {
             errorCodeReason = "missing authentication, did you forget to authenticate with the application Master key (0x00) ?), aborted";
             return false;
         }
+
+/*
+        final byte[] file01_fileSettings = hexStringToByteArray("000000e0200000");
+        final byte[] file02_fileSettings = hexStringToByteArray("0000e0ee000100");
+        final byte[] file03_fileSettings = hexStringToByteArray("00033023800000");
+        final byte[] file03_fileSettings = hexStringToByteArray("00 03 3023 80 0000");
+        00 = file type = standard file
+        03 = communication mode = full (00 = plain, 01 = MAC)
+        3023 = access rights RW || Car || R || W
+        80 00 00 = file size (LSB, 128 decimal)
+        final byte defaultKeyVersion = (byte) 0x00; // valid for all 5 application keys
+        final byte[] defaultApplicationKey = new byte[16]; // valid for all 5 application keys
+*/
+/*
+fileNumber: 01
+fileType: 0 (Standard)
+communicationSettings: 00 (Plain)
+accessRights RW | CAR: 00
+accessRights R  | W:   E0
+accessRights RW:       0
+accessRights CAR:      0
+accessRights R:        14
+accessRights W:        0
+fileSize: 32
+--------------
+fileNumber: 02
+fileType: 0 (Standard)
+communicationSettings: 00 (Plain)
+accessRights RW | CAR: E0
+accessRights R  | W:   EE
+accessRights RW:       14
+accessRights CAR:      0
+accessRights R:        14
+accessRights W:        14
+fileSize: 256
+--------------
+fileNumber: 03
+fileType: 0 (Standard)
+communicationSettings: 03 (Encrypted)
+accessRights RW | CAR: 30
+accessRights R  | W:   23
+accessRights RW:       3
+accessRights CAR:      0
+accessRights R:        2
+accessRights W:        3
+fileSize: 128
+         */
 
         // IV_Input (IV_Label || TI || CmdCounter || Padding)
         // Generating the MAC for the Command APDU
@@ -445,9 +497,25 @@ public class Ntag424DnaMethods {
         byte[] ivForCmdData = AES.encrypt(startingIv, SesAuthENCKey, ivInput);
         log(methodName, printData("ivForCmdData", ivForCmdData));
 
+        // command data
+        byte communicationSettingsByte = (byte) 0x00;
+        if (communicationSettings.name().equals(CommunicationSettings.Plain.name())) communicationSettingsByte = (byte) 0x00;
+        if (communicationSettings.name().equals(CommunicationSettings.MACed.name())) communicationSettingsByte = (byte) 0x01;
+        if (communicationSettings.name().equals(CommunicationSettings.Full.name())) communicationSettingsByte = (byte) 0x03;
+        byte accessRightsRwCar = (byte) ((keyRW << 4) | (keyCar & 0x0F)); // Read&Write Access & ChangeAccessRights
+        byte accessRightsRW = (byte) ((keyR << 4) | (keyW & 0x0F)) ; // Read Access & Write Access
+        byte[] fileSizeByte = Utils.intTo3ByteArrayInversed(fileSize);
+        ByteArrayOutputStream baosCommandData = new ByteArrayOutputStream();
+        baosCommandData.write((byte) 0x00); // fileType 00, fixed
+        baosCommandData.write(communicationSettingsByte);
+        baosCommandData.write(accessRightsRwCar);
+        baosCommandData.write(accessRightsRW);
+        baosCommandData.write(fileSizeByte, 0, fileSizeByte.length);
+        byte[] commandData = baosCommandData.toByteArray();
+
         // build the cmdData, is a bit complex due to a lot of options - here it is shortened
         //byte[] commandData = hexStringToByteArray ("4000E0C1F121200000430000430000"); // feature & hints
-        byte[] commandData = hexStringToByteArray("40EEEEC1F121200000500000500000"); // this is the data of the working TapLinx command
+        //byte[] commandData = hexStringToByteArray("40EEEEC1F121200000500000500000"); // this is the data of the working TapLinx command
 
         log(methodName, printData("commandData", commandData));
 /*
@@ -481,9 +549,10 @@ F121h = SDMAccessRights (RFU: 0xF, FileAR.SDMCtrRet = 0x1, FileAR.SDMMetaRead: 0
         //byte[] commandDataPadded = hexStringToByteArray("4000E0D1F1211F00004400004400004000008A00008000000000000000000000");
 
         // this is the commandPadded from working TapLinx example
-        byte[] commandDataPadded = hexStringToByteArray("40EEEEC1F1212A000050000050000080");
+        //byte[] commandDataPadded = hexStringToByteArray("40EEEEC1F1212A000050000050000080");
+        byte[] commandDataPadded = paddingWriteData(commandData);
 
-        // this is the command from working TapLinx example
+                // this is the command from working TapLinx example
         //byte[] commandDataPadded = hexStringToByteArray("40EEEEC1F12120000032000045000080");
 
         log(methodName, printData("commandDataPadded", commandDataPadded));
