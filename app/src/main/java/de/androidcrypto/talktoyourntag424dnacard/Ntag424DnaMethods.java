@@ -497,13 +497,19 @@ fileSize: 128
         if (communicationSettings.name().equals(CommunicationSettings.Plain.name())) communicationSettingsByte = (byte) 0x00;
         if (communicationSettings.name().equals(CommunicationSettings.MACed.name())) communicationSettingsByte = (byte) 0x01;
         if (communicationSettings.name().equals(CommunicationSettings.Full.name())) communicationSettingsByte = (byte) 0x03;
+        byte fileOption = (byte) 0x40; // enable SDM and mirroring, Plain communication
         byte accessRightsRwCar = (byte) ((keyRW << 4) | (keyCar & 0x0F)); // Read&Write Access & ChangeAccessRights
         byte accessRightsRW = (byte) ((keyR << 4) | (keyW & 0x0F)) ; // Read Access & Write Access
+        byte sdmOptions = (byte) 0xC1; // UID mirror = 1, SDMReadCtr = 1, SDMReadCtrLimit = 0, SDMENCFileData = 0, ASCII Encoding mode = 1
+        byte[] sdmAccessRights = hexStringToByteArray("F121");
         ByteArrayOutputStream baosCommandData = new ByteArrayOutputStream();
         //baosCommandData.write((byte) 0x00); // fileType 00, fixed
-        baosCommandData.write(communicationSettingsByte); // this is the  fileOptions byte
+        //baosCommandData.write(communicationSettingsByte); // this is the  fileOptions byte
+        baosCommandData.write(fileOption);
         baosCommandData.write(accessRightsRwCar);
         baosCommandData.write(accessRightsRW);
+        baosCommandData.write(sdmOptions);
+        baosCommandData.write(sdmAccessRights, 0, sdmAccessRights.length);
         byte[] commandData = baosCommandData.toByteArray();
 
         // build the cmdData, is a bit complex due to a lot of options - here it is shortened
