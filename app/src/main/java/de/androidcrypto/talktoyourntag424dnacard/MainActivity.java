@@ -129,6 +129,13 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     private int CMD_COUNTER; // filled in by authenticateEv2, LSB encoded when in byte[
 
     /**
+     * section for key handling
+     */
+
+    private Button changeKey0ToC, changeKey1ToC, changeKey2ToC, changeKey3ToC, changeKey4ToC; // change key to CHANGED
+    private Button changeKey0ToD, changeKey1ToD, changeKey2ToD, changeKey3ToD, changeKey4ToD; // change key to DEFAULT
+
+    /**
      * section for general
      */
 
@@ -355,6 +362,19 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         authKey3C = findViewById(R.id.btnAuthKey3C);
         authKey4C = findViewById(R.id.btnAuthKey4C);
 
+        // key handling
+        // change key from DEFAULT to CHANGED
+        changeKey0ToC = findViewById(R.id.btnChangeKey0ToC);
+        changeKey1ToC = findViewById(R.id.btnChangeKey1ToC);
+        changeKey2ToC = findViewById(R.id.btnChangeKey2ToC);
+        changeKey3ToC = findViewById(R.id.btnChangeKey3ToC);
+        changeKey4ToC = findViewById(R.id.btnChangeKey4ToC);
+        // change key from CHANGED to DEFAULT
+        changeKey0ToD = findViewById(R.id.btnChangeKey0ToD);
+        changeKey1ToD = findViewById(R.id.btnChangeKey1ToD);
+        changeKey2ToD = findViewById(R.id.btnChangeKey2ToD);
+        changeKey3ToD = findViewById(R.id.btnChangeKey3ToD);
+        changeKey4ToD = findViewById(R.id.btnChangeKey4ToD);
 
         // general handling
         getCardUidDes = findViewById(R.id.btnGetCardUidDes);
@@ -1338,7 +1358,6 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         authKey0D.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                // authenticate with the read access key = 03...
                 clearOutputFields();
                 String logString = "authenticateEv2First with DEFAULT AES key number 0x00 = application Master key";
                 writeToUiAppend(output, logString);
@@ -1450,6 +1469,40 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
             }
         });
 
+        /**
+         * section for key changing
+         */
+
+        changeKey0ToC.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "change key number 0x00 from DEFAULT to CHANGED";
+                writeToUiAppend(output, logString);
+                boolean success = runChangeKey(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_AES, APPLICATION_KEY_MASTER_AES_DEFAULT);
+            }
+        });
+
+        changeKey1ToC.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "change key number 0x01 from DEFAULT to CHANGED";
+                writeToUiAppend(output, logString);
+                boolean success = runChangeKey(APPLICATION_KEY_1_NUMBER, APPLICATION_KEY_1_AES, APPLICATION_KEY_1_AES_DEFAULT);
+            }
+        });
+
+        changeKey1ToD.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "change key number 0x01 from CHANGED to DEFAULT";
+                writeToUiAppend(output, logString);
+                boolean success = runChangeKey(APPLICATION_KEY_1_NUMBER, APPLICATION_KEY_1_AES_DEFAULT, APPLICATION_KEY_1_AES);
+
+            }
+        });
 
         getFileSettings.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -2436,6 +2489,7 @@ C1h =
             writeToUiAppend(output, printData("TRANSACTION_IDENTIFIER", TRANSACTION_IDENTIFIER));
             writeToUiAppend(output, "CMD_COUNTER: " + CMD_COUNTER);
             writeToUiAppend(output, "key used for auth: " + ntag424DnaMethods.getKeyNumberUsedForAuthentication());
+            writeToUiAppendBorderColor(errorCode, errorCodeLayout, methodName + " SUCCESS", COLOR_GREEN);
             vibrateShort();
 
             // prepare data for export
@@ -2443,8 +2497,53 @@ C1h =
             exportStringFileName = "auth_" + applicationKeyNumber + ".html";
             writeToUiToast("your authentication log file is ready for export");
             return true;
-            // show logData
-            //showDialog(MainActivity.this, desfireAuthenticateProximity.getLogData());
+        } else {
+            String errorName = ntag424DnaMethods.getErrorCodeReason();
+            writeToUiAppendBorderColor(errorCode, errorCodeLayout, methodName + " FAILURE with error code: " + errorName, COLOR_RED);
+            return false;
+        }
+    }
+
+    private boolean runChangeKey(byte applicationKeyNumber, byte[] applicationKeyNew, byte[] applicationKeyOld) {
+        final String methodName = "runChangeKey";
+        writeToUiAppend(output, methodName);
+        // sanity checks
+        if (selectedApplicationId == null) {
+            writeToUiAppend(output, "you need to select an application first, aborted");
+            writeToUiAppendBorderColor(errorCode, errorCodeLayout, methodName + " FAILURE", COLOR_RED);
+            return false;
+        }
+        if ((applicationKeyNumber < (byte) 0x00) || (applicationKeyNumber > (byte) 0x04)) {
+            writeToUiAppend(output, "applicationKeyNumber is not in range 0..4, aborted");
+            writeToUiAppendBorderColor(errorCode, errorCodeLayout, methodName + " FAILURE", COLOR_RED);
+            return false;
+        }
+        if ((applicationKeyNew == null) || (applicationKeyNew.length != 16)) {
+            writeToUiAppend(output, "applicationKeyNew is NULL or not of length 16, aborted");
+            writeToUiAppendBorderColor(errorCode, errorCodeLayout, methodName + " FAILURE", COLOR_RED);
+            return false;
+        }
+        if ((applicationKeyOld == null) || (applicationKeyOld.length != 16)) {
+            writeToUiAppend(output, "applicationKeyOld is NULL or not of length 16, aborted");
+            writeToUiAppendBorderColor(errorCode, errorCodeLayout, methodName + " FAILURE", COLOR_RED);
+            return false;
+        }
+        writeToUiAppend(output, methodName + " with keyNumber " +
+                applicationKeyNumber + printData(" new key", applicationKeyNew) +
+                applicationKeyNumber + printData(" old key", applicationKeyOld));
+        byte keyVersion = (byte) 0x00;
+        writeToUiAppend(output, "This method will set the keyVersion to 0x00");
+
+        byte[] responseData = new byte[2];
+        boolean success = ntag424DnaMethods.changeApplicationKey(applicationKeyNumber, applicationKeyNew, applicationKeyOld, keyVersion);
+        responseData = ntag424DnaMethods.getErrorCode();
+        if (success) {
+            writeToUiAppend(output, methodName + " SUCCESS");
+            writeToUiAppend(output, "auth    key number: " + ntag424DnaMethods.getKeyNumberUsedForAuthentication());
+            writeToUiAppend(output, "changed key number: " + applicationKeyNumber);
+            writeToUiAppendBorderColor(errorCode, errorCodeLayout, methodName + " SUCCESS", COLOR_GREEN);
+            vibrateShort();
+            return true;
         } else {
             String errorName = ntag424DnaMethods.getErrorCodeReason();
             writeToUiAppendBorderColor(errorCode, errorCodeLayout, methodName + " FAILURE with error code: " + errorName, COLOR_RED);
@@ -2979,6 +3078,7 @@ C1h =
     }
 
 
+    /*
     private boolean changeFileSettingsA(TextView logTextView, byte fileNumber, byte[] methodResponse) {
         // NOTE: don't forget to authenticate with CAR key
 
@@ -3043,6 +3143,8 @@ C1h =
         }
         return false;
     }
+
+     */
 
 /**
  * section for key handling
@@ -3429,6 +3531,7 @@ C1h =
         errorCodeLayout.setBoxStrokeColorStateList(myColorList);
     }
 
+
     private void invalidateAllSelections() {
         selectedApplicationId = null;
         selectedFileId = "";
@@ -3437,14 +3540,10 @@ C1h =
             fileSelected.setText("");
         });
         KEY_NUMBER_USED_FOR_AUTHENTICATION = -1;
-        SESSION_KEY_DES = null;
-        SESSION_KEY_TDES = null;
     }
 
     private void invalidateEncryptionKeys() {
         KEY_NUMBER_USED_FOR_AUTHENTICATION = -1;
-        SESSION_KEY_DES = null;
-        SESSION_KEY_TDES = null;
     }
 
     private void vibrateShort() {

@@ -1269,7 +1269,7 @@
                     android:orientation="horizontal">
 
                     <TextView
-                        android:id="@+id/tvChangeKeyD0"
+                        android:id="@+id/tvChangeKey"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
@@ -1281,7 +1281,7 @@
                         android:textStyle="normal" />
 
                     <Button
-                        android:id="@+id/btnChangeKeyD0D"
+                        android:id="@+id/btnChangeKey0ToC"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
@@ -1290,7 +1290,7 @@
                         android:text="to C" />
 
                     <Button
-                        android:id="@+id/btnChangeKeyD0A"
+                        android:id="@+id/btnChangeKey0ToD"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="1dp"
@@ -1306,7 +1306,7 @@
                     android:orientation="horizontal">
 
                     <TextView
-                        android:id="@+id/tvChangeKeyD1"
+                        android:id="@+id/tvChangeKey1"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
@@ -1318,7 +1318,7 @@
                         android:textStyle="normal" />
 
                     <Button
-                        android:id="@+id/btnChangeKeyD1D"
+                        android:id="@+id/btnChangeKey1ToC"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
@@ -1327,7 +1327,7 @@
                         android:text="to C" />
 
                     <Button
-                        android:id="@+id/btnChangeKeyD1A"
+                        android:id="@+id/btnChangeKey1ToD"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="1dp"
@@ -1343,7 +1343,7 @@
                     android:orientation="horizontal">
 
                     <TextView
-                        android:id="@+id/tvChangeKeyD2"
+                        android:id="@+id/tvChangeKey2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
@@ -1355,7 +1355,7 @@
                         android:textStyle="normal" />
 
                     <Button
-                        android:id="@+id/btnChangeKeyD2D"
+                        android:id="@+id/btnChangeKey2ToC"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
@@ -1364,7 +1364,7 @@
                         android:text="to C" />
 
                     <Button
-                        android:id="@+id/btnChangeKeyD2A"
+                        android:id="@+id/btnChangeKey2ToD"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="1dp"
@@ -1380,7 +1380,7 @@
                     android:orientation="horizontal">
 
                     <TextView
-                        android:id="@+id/tvChangeKeyD3"
+                        android:id="@+id/tvChangeKey3"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
@@ -1392,7 +1392,7 @@
                         android:textStyle="normal" />
 
                     <Button
-                        android:id="@+id/btnChangeKeyD3D"
+                        android:id="@+id/btnChangeKey3ToC"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
@@ -1401,7 +1401,7 @@
                         android:text="to C" />
 
                     <Button
-                        android:id="@+id/btnChangeKeyD3A"
+                        android:id="@+id/btnChangeKey3ToD"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="1dp"
@@ -1417,7 +1417,7 @@
                     android:orientation="horizontal">
 
                     <TextView
-                        android:id="@+id/tvChangeKeyD4"
+                        android:id="@+id/tvChangeKey4"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
@@ -1429,7 +1429,7 @@
                         android:textStyle="normal" />
 
                     <Button
-                        android:id="@+id/btnChangeKeyD4D"
+                        android:id="@+id/btnChangeKey4ToC"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
@@ -1438,7 +1438,7 @@
                         android:text="to C" />
 
                     <Button
-                        android:id="@+id/btnChangeKeyD4A"
+                        android:id="@+id/btnChangeKey4ToD"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="1dp"
@@ -1449,10 +1449,6 @@
                 </LinearLayout>
 
             </LinearLayout>
-
-
-
-
 
             <LinearLayout
                 android:id="@+id/llKeys"

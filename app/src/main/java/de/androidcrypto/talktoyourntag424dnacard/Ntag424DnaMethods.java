@@ -140,6 +140,7 @@ public class Ntag424DnaMethods {
     private static final byte GET_ADDITIONAL_FRAME_COMMAND = (byte) 0xAF;
     private static final byte SELECT_APPLICATION_ISO_COMMAND = (byte) 0xA4;
     private static final byte GET_FILE_SETTINGS_COMMAND = (byte) 0xF5;
+    private static final byte CHANGE_FILE_SETTINGS_COMMAND = (byte) 0x5F;
     private static final byte READ_STANDARD_FILE_COMMAND = (byte) 0xAD; // different to DESFire !
     private static final byte READ_STANDARD_FILE_SECURE_COMMAND = (byte) 0xAD;
     private static final byte WRITE_STANDARD_FILE_SECURE_COMMAND = (byte) 0x8D;
@@ -176,6 +177,9 @@ public class Ntag424DnaMethods {
 
     private static final byte[] PADDING_FULL = hexStringToByteArray("80000000000000000000000000000000");
 
+    public enum CommunicationSettings {
+        Plain, MACed, Encrypted
+    }
 
     public Ntag424DnaMethods(TextView textView, Tag tag, Activity activity) {
         this.tag = tag;
@@ -338,6 +342,234 @@ public class Ntag424DnaMethods {
             System.arraycopy(responseBytes, 0, errorCode, 0, 2);
             errorCodeReason = methodName + " FAILURE";
             return null;
+        }
+    }
+
+    public boolean changeFileSettings(byte fileNumber, CommunicationSettings communicationSettings, int keyRW, int keyCar, int keyR, int keyW, boolean sdmEnable) {
+
+        // this method can only enable Secure Dynamic Message but cannot set specific data like offsets
+        // see NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf pages 34 - 35 for SDM example
+        // see NTAG 424 DNA NT4H2421Gx.pdf pages 65 - 69 for fields and errors
+
+
+        // status: NOT WORKING
+        // eventually the file needs to get the sdm options on setup even if disabled
+        // todo check with real tag if fileSettings are "prepared" for SDM usage
+
+        // see NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf pages 34 - 35 for SDM example
+        // see NTAG 424 DNA NT4H2421Gx.pdf pages 65 - 69 for fields and errors
+        // see NTAG 424 DNA NT4H2421Gx.pdf pages 69 - 70 for getFileSettings with responses incl. SDM
+        // see NTAG 424 DNA NT4H2421Gx.pdf pages 71 - 72 for getFileCounters
+        // see Mifare DESFire Light Features and Hints AN12343.pdf pages 23 - 25 for general workflow with FULL communication
+
+        // see NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf pages 34 - 35
+        // Change NDEF file settings using Cmd.ChangeFileSettings using CommMode.Full
+        // this is based on the changeFileSettings on a NTAG 424 DNA tag
+
+        String logData = "";
+        final String methodName = "changeFileSettings";
+        log(methodName, "started", true);
+        log(methodName, "fileNumber: " + fileNumber);
+        // sanity checks
+        // sanity checks
+        errorCode = new byte[2];
+        // sanity checks
+        if (keyRW < 0) {
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "keyRW is < 0, aborted";
+            return false;
+        }
+        if ((keyRW > 4) & (keyRW != 14) & (keyRW != 15)) {
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "keyRW is > > 4 but not 14 or 15, aborted";
+            return false;
+        }
+        if (keyCar < 0) {
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "keyCar is < 0, aborted";
+            return false;
+        }
+        if ((keyCar > 4) & (keyCar != 14) & (keyCar != 15)) {
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "keyCar is > > 4 but not 14 or 15, aborted";
+            return false;
+        }
+        if (keyR < 0) {
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "keyR is < 0, aborted";
+            return false;
+        }
+        if ((keyR > 4) & (keyR != 14) & (keyR != 15)) {
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "keyR is > > 4 but not 14 or 15, aborted";
+            return false;
+        }
+        if (keyW < 0) {
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "keyW is < 0, aborted";
+            return false;
+        }
+        if ((keyW > 4) & (keyW != 14) & (keyW != 15)) {
+            errorCode = RESPONSE_PARAMETER_ERROR.clone();
+            errorCodeReason = "keyW is > > 4 but not 14 or 15, aborted";
+            return false;
+        }
+        if ((isoDep == null) || (!isoDep.isConnected())) {
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "isoDep is NULL (maybe it is not a NTAG424DNA tag ?), aborted";
+            return false;
+        }
+        if ((!authenticateEv2FirstSuccess) & (!authenticateEv2NonFirstSuccess)) {
+            errorCode = RESPONSE_FAILURE_MISSING_AUTHENTICATION.clone();
+            errorCodeReason = "missing authentication, did you forget to authenticate with the application Master key (0x00) ?), aborted";
+            return false;
+        }
+
+        // IV_Input (IV_Label || TI || CmdCounter || Padding)
+        // Generating the MAC for the Command APDU
+        byte[] commandCounterLsb = Utils.intTo2ByteArrayInversed(CmdCounter);
+        log(methodName, "CmdCounter: " + CmdCounter);
+        log(methodName, printData("commandCounterLsb", commandCounterLsb));
+        byte[] padding1 = hexStringToByteArray("0000000000000000"); // 8 bytes
+        ByteArrayOutputStream baosIvInput = new ByteArrayOutputStream();
+        baosIvInput.write(HEADER_MAC, 0, HEADER_MAC.length);
+        baosIvInput.write(TransactionIdentifier, 0, TransactionIdentifier.length);
+        baosIvInput.write(commandCounterLsb, 0, commandCounterLsb.length);
+        baosIvInput.write(padding1, 0, padding1.length);
+        byte[] ivInput = baosIvInput.toByteArray();
+        log(methodName, printData("ivInput", ivInput));
+
+        // IV for CmdData = Enc(KSesAuthENC, IV_Input)
+        log(methodName, printData("SesAuthENCKey", SesAuthENCKey));
+        byte[] startingIv = new byte[16];
+        byte[] ivForCmdData = AES.encrypt(startingIv, SesAuthENCKey, ivInput);
+        log(methodName, printData("ivForCmdData", ivForCmdData));
+
+        // build the cmdData, is a bit complex due to a lot of options - here it is shortened
+        //byte[] commandData = hexStringToByteArray ("4000E0C1F121200000430000430000"); // feature & hints
+        byte[] commandData = hexStringToByteArray("40EEEEC1F121200000500000500000"); // this is the data of the working TapLinx command
+
+        log(methodName, printData("commandData", commandData));
+/*
+from: NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf page 34
+CmdData example: 4000E0C1F121200000430000430000
+40 00E0 C1 F121 200000 430000 430000
+40h = FileOption (SDM and
+Mirroring enabled), CommMode: plain
+00E0h = AccessRights (FileAR.ReadWrite: 0x0, FileAR.Change: 0x0, FileAR.Read: 0xE, FileAR.Write; 0x0)
+C1h =
+• UID mirror: 1
+• SDMReadCtr: 1
+• SDMReadCtrLimit: 0
+• SDMENCFileData: 0
+• ASCII Encoding mode: 1
+F121h = SDMAccessRights (RFU: 0xF, FileAR.SDMCtrRet = 0x1, FileAR.SDMMetaRead: 0x2, FileAR.SDMFileRead: 0x1)
+200000h = ENCPICCDataOffset
+430000h = SDMMACOffset
+430000h = SDMMACInputOffset
+ */
+
+        // eventually some padding is necessary with 0x80..00
+
+        // this is from https://community.nxp.com/t5/NFC/NTAG-424-DNA-Change-NDEF-File-Settings-problem/td-p/1328599
+        // 40 00 E0 D1 F1 21 1F 00 00 44 00 00 44 00 00 40 00 00 8A 00 00 80 00 00 00 00 00 00 00 00 00 00
+        // 4000E0D1F1211F00004400004400004000008A00008000000000000000000000
+
+        // our fix commandData from example has 15 bytes so we do need 16 bytes
+        //byte[] commandDataPadded = hexStringToByteArray("40EEEEC1F12120000050000050000080");
+        //byte[] commandDataPadded = hexStringToByteArray ("40EEEEC1F12120000043000043000080");
+        //byte[] commandDataPadded = hexStringToByteArray("4000E0D1F1211F00004400004400004000008A00008000000000000000000000");
+
+        // this is the commandPadded from working TapLinx example
+        byte[] commandDataPadded = hexStringToByteArray("40EEEEC1F1212A000050000050000080");
+
+        // this is the command from working TapLinx example
+        //byte[] commandDataPadded = hexStringToByteArray("40EEEEC1F12120000032000045000080");
+
+        log(methodName, printData("commandDataPadded", commandDataPadded));
+
+        // E(KSesAuthENC, IVc, CmdData || Padding (if necessary))
+        byte[] encryptedData = AES.encrypt(ivForCmdData, SesAuthENCKey, commandDataPadded);
+        log(methodName, printData("encryptedData", encryptedData));
+
+        // Generating the MAC for the Command APDU
+        // Cmd || CmdCounter || TI || CmdHeader = fileNumber || E(KSesAuthENC, CmdData)
+        ByteArrayOutputStream baosMacInput = new ByteArrayOutputStream();
+        baosMacInput.write(CHANGE_FILE_SETTINGS_COMMAND); // 0x5F
+        baosMacInput.write(commandCounterLsb, 0, commandCounterLsb.length);
+        baosMacInput.write(TransactionIdentifier, 0, TransactionIdentifier.length);
+        baosMacInput.write(fileNumber);
+        baosMacInput.write(encryptedData, 0, encryptedData.length);
+        byte[] macInput = baosMacInput.toByteArray();
+        log(methodName, printData("macInput", macInput));
+
+        // generate the MAC (CMAC) with the SesAuthMACKey
+        log(methodName, printData("SesAuthMACKey", SesAuthMACKey));
+        byte[] macFull = calculateDiverseKey(SesAuthMACKey, macInput);
+        log(methodName, printData("macFull", macFull));
+        // now truncate the MAC
+        byte[] macTruncated = truncateMAC(macFull);
+        log(methodName, printData("macTruncated", macTruncated));
+
+        // error in Features and Hints, page 57, point 28:
+        // Data (FileNo || Offset || DataLenght || Data) is NOT correct, as well not the Data Message
+        // correct is the following concatenation:
+
+        // Data (CmdHeader = fileNumber || Encrypted Data || MAC)
+        ByteArrayOutputStream baosWriteDataCommand = new ByteArrayOutputStream();
+        baosWriteDataCommand.write(fileNumber);
+        baosWriteDataCommand.write(encryptedData, 0, encryptedData.length);
+        baosWriteDataCommand.write(macTruncated, 0, macTruncated.length);
+        byte[] writeDataCommand = baosWriteDataCommand.toByteArray();
+        log(methodName, printData("writeDataCommand", writeDataCommand));
+
+        byte[] response = new byte[0];
+        byte[] apdu = new byte[0];
+        byte[] responseMACTruncatedReceived;
+        try {
+            apdu = wrapMessage(CHANGE_FILE_SETTINGS_COMMAND, writeDataCommand); //0261B6D97903566E84C3AE5274467E89EAD799B7C1A0EF7A04 25d = 19b
+            // comApdu       905F0000190261B6D97903566E84C3AE5274467E89EAD799B7C1A0EF7A0400
+            // my apdu       905f00001902d7bff30bb6d212e512ddf49942a754f7003b5d104371344200
+
+            // when I append sample data this change
+            // gives error   9D Permission denied error
+/*
+from NTAG424DNA sheet page 69:
+PERMISSION_DENIED
+- 9Dh PICC level (MF) is selected.
+- access right Change of targeted file has access conditions set to Fh.
+- Enabling Secure Dynamic Messaging (FileOption Bit 6 set to 1b) is only allowed for FileNo 02h.
+ */
+            // expected APDU 905F0000190261B6D97903566E84C3AE5274467E89EAD799B7C1A0EF7A0400 (31 bytes)
+            response = sendData(apdu);
+        } catch (IOException e) {
+            errorCode = RESPONSE_FAILURE.clone();
+            errorCodeReason = "IOException: " + e.getMessage();
+            return false;
+        }
+        if (!checkResponse(response)) {
+            log(methodName, methodName + " FAILURE");
+            byte[] responseBytes = returnStatusBytes(response);
+            System.arraycopy(responseBytes, 0, errorCode, 0, 2);
+            errorCodeReason = methodName + " FAILURE";
+            return false;
+        }
+        // note: after sending data to the card the commandCounter is increased by 1
+        CmdCounter++;
+        log(methodName, "the CmdCounter is increased by 1 to " + CmdCounter);
+
+        responseMACTruncatedReceived = Arrays.copyOf(response, response.length - 2);
+
+        if (verifyResponseMac(responseMACTruncatedReceived, null)) {
+            log(methodName, methodName + " SUCCESS");
+            errorCode = RESPONSE_OK.clone();
+            errorCodeReason = methodName + " SUCCESS";
+            return true;
+        } else {
+            log(methodName, methodName + " FAILURE");
+            errorCode = RESPONSE_OK.clone();
+            errorCodeReason = methodName + " FAILURE";
+            return false;
         }
     }
 
@@ -1534,6 +1766,8 @@ public class Ntag424DnaMethods {
         // Cmd.ChangeKey is always run in CommunicationMode.Full and there are 2 use cases:
         // Case 1: Key number to be changed ≠ Key number for currently authenticated session
         // Case 2: Key number to be changed == Key number for currently authenticated session (usually the application Master key)
+
+        // todo work on case 2
 
         String logData = "";
         final String methodName = "changeApplicationKey";
