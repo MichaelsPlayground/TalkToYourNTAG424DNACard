@@ -156,6 +156,12 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     private Button changeKeyDes01ToChanged2DesVisualizing, changeKeyDes01ToDefault2DesVisualizing, authDesVisualizingC2;
 
     /**
+     * section for tests
+     */
+
+    private Button testNdefTemplate;
+
+    /**
      * section for constants
      */
 
@@ -403,6 +409,8 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         changeKeyDes01ToChanged2DesVisualizing = findViewById(R.id.btnDesVisualizeChangeKeyDes01ToChanged2);
         changeKeyDes01ToDefault2DesVisualizing = findViewById(R.id.btnDesVisualizeChangeKeyDes01ToDefault2);
 
+        // tests
+        testNdefTemplate = findViewById(R.id.btnTestNdefTemplate);
 
         // some presets
         applicationId.setText(Utils.bytesToHexNpeUpperCase(APPLICATION_IDENTIFIER));
@@ -435,8 +443,45 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 Log.d(TAG, printData("fileSettings14", fileSettings14));
             }
         });
+       */
 
-         */
+        testNdefTemplate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String baseUrl = "https://sdm.nfcdeveloper.com/tag";
+                NdefForSdm ndefForSdm = new NdefForSdm(baseUrl);
+                String newTemplateUrl = ndefForSdm.urlBuilder();
+                writeToUiAppend(output, "templateUrl: " + newTemplateUrl);
+                writeToUiAppend(output, "EncPICC data offset: " + ndefForSdm.getOffsetEncryptedPiccData());
+                writeToUiAppend(output, "SDMMAC  data offset: " + ndefForSdm.getOffsetSDMMACData());
+                // templateUrl: https://sdm.nfcdeveloper.com/tag?picc_data=00000000000000000000000000000000&cmac=0000000000000000
+                // EncPICC data offset: 43 SDMMAC  data offset: 81
+                baseUrl = "https://choose.url.com/ntag424";
+                ndefForSdm = new NdefForSdm(baseUrl);
+                newTemplateUrl = ndefForSdm.urlBuilder();
+                writeToUiAppend(output, "templateUrl: " + newTemplateUrl);
+                writeToUiAppend(output, "EncPICC data offset: " + ndefForSdm.getOffsetEncryptedPiccData());
+                writeToUiAppend(output, "SDMMAC  data offset: " + ndefForSdm.getOffsetSDMMACData());
+                // https://choose.url.com/ntag424?picc_data=00000000000000000000000000000000&cmac=0000000000000000
+                // EncPICC data offset: 41 SDMMAC  data offset: 79
+                // val's from feature:  32                      67
+                //                      -9                     -12
+                aa
+                baseUrl = "https://sdm.nfcdeveloper.com/tag/";
+                ndefForSdm = new NdefForSdm(baseUrl);
+                String newBaseUrl = ndefForSdm.getUrlBase();
+                writeToUiAppend(output, "newBaseUrl: " + newBaseUrl);
+                baseUrl = "https://sdm.nfcdeveloper.com/tag//";
+                ndefForSdm = new NdefForSdm(baseUrl);
+                newBaseUrl = ndefForSdm.getUrlBase();
+                writeToUiAppend(output, "newBaseUrl: " + newBaseUrl);
+                baseUrl = "httpws://sdm.nfcdeveloper.com/tag";
+                ndefForSdm = new NdefForSdm(baseUrl);
+                newBaseUrl = ndefForSdm.getUrlBase();
+                writeToUiAppend(output, "newBaseUrl: " + newBaseUrl);
+
+            }
+        });
 
         rbFileFreeAccess.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -1756,8 +1801,10 @@ fileSize: 256
                 // this part is for file number 02 = NDEF data file
                 byte fileIdByte = Ntag424DnaMethods.STANDARD_FILE_NUMBER_02;
                 // enable SDM and mirroring
-                boolean success = ntag424DnaMethods.changeFileSettings(fileIdByte, Ntag424DnaMethods.CommunicationSettings.Full, 0,0, 14, 0, true);
-                //boolean success = ntag424DnaMethods.changeFileSettings(fileIdByte, Ntag424DnaMethods.CommunicationSettings.Full, 1,2, 3, 4, false);
+                //boolean success = ntag424DnaMethods.changeFileSettings(fileIdByte, Ntag424DnaMethods.CommunicationSettings.Plain, 0,0, 14, 0, true);
+                // disable SDM and mirroring
+                boolean success = ntag424DnaMethods.changeFileSettings(fileIdByte, Ntag424DnaMethods.CommunicationSettings.Plain, 14,0, 14, 14, false);
+
                 byte[] responseData = new byte[2];
                 responseData = ntag424DnaMethods.getErrorCode();
                 if (success) {

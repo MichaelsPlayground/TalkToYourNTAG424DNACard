@@ -260,12 +260,12 @@
                         android:text="xx" />
 
                     <Button
-                        android:id="@+id/btnxx2"
+                        android:id="@+id/btnTestNdefTemplate"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
                         android:layout_weight="1"
-                        android:text="xx" />
+                        android:text="NDEF templ" />
 
                 </LinearLayout>
 

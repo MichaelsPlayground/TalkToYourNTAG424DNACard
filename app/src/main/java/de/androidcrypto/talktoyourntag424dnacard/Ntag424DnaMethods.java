@@ -378,27 +378,16 @@ public class Ntag424DnaMethods {
         // this method can only enable Secure Dynamic Message but cannot set specific data like offsets
         // see NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf pages 34 - 35 for SDM example
         // see NTAG 424 DNA NT4H2421Gx.pdf pages 65 - 69 for fields and errors
-
-
-        // status:
-        // eventually the file needs to get the sdm options on setup even if disabled
-        // todo check with real tag if fileSettings are "prepared" for SDM usage
-
-        // see NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf pages 34 - 35 for SDM example
-        // see NTAG 424 DNA NT4H2421Gx.pdf pages 65 - 69 for fields and errors
         // see NTAG 424 DNA NT4H2421Gx.pdf pages 69 - 70 for getFileSettings with responses incl. SDM
         // see NTAG 424 DNA NT4H2421Gx.pdf pages 71 - 72 for getFileCounters
         // see Mifare DESFire Light Features and Hints AN12343.pdf pages 23 - 25 for general workflow with FULL communication
 
-        // see NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf pages 34 - 35
-        // Change NDEF file settings using Cmd.ChangeFileSettings using CommMode.Full
-        // this is based on the changeFileSettings on a NTAG 424 DNA tag
+        // status: WORKING on enabling and disabling SDM feature
 
         String logData = "";
         final String methodName = "changeFileSettings";
         log(methodName, "started", true);
         log(methodName, "fileNumber: " + fileNumber);
-        // sanity checks
         // sanity checks
         errorCode = new byte[2];
         // sanity checks
@@ -462,20 +451,6 @@ public class Ntag424DnaMethods {
             }
         }
 
-
-
-/*
-        final byte[] file01_fileSettings = hexStringToByteArray("000000e0200000");
-        final byte[] file02_fileSettings = hexStringToByteArray("0000e0ee000100");
-        final byte[] file03_fileSettings = hexStringToByteArray("00033023800000");
-        final byte[] file03_fileSettings = hexStringToByteArray("00 03 3023 80 0000");
-        00 = file type = standard file
-        03 = communication mode = full (00 = plain, 01 = MAC)
-        3023 = access rights RW || Car || R || W
-        80 00 00 = file size (LSB, 128 decimal)
-        final byte defaultKeyVersion = (byte) 0x00; // valid for all 5 application keys
-        final byte[] defaultApplicationKey = new byte[16]; // valid for all 5 application keys
-*/
 /*
 fileNumber: 01
 fileType: 0 (Standard)
