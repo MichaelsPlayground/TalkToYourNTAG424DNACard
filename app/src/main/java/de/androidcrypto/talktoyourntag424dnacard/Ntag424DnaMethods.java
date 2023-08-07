@@ -792,9 +792,19 @@ fileSize: 128
         byte accessRightsRW = (byte) ((keyR << 4) | (keyW & 0x0F)) ; // Read Access & Write Access
         byte sdmOptions = (byte) 0xC1; // UID mirror = 1, SDMReadCtr = 1, SDMReadCtrLimit = 0, SDMENCFileData = 0, ASCII Encoding mode = 1
         byte[] sdmAccessRights = hexStringToByteArray("F121");
-        byte[] ENCPICCDataOffset = Utils.intTo3ByteArrayInversed(encPiccDataOffset); // e.g. 0x200000
+        byte[] ENCPICCDataOffset = Utils.intTo3ByteArrayInversed(encPiccDataOffset); // e.g. 0x200000 for NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf example on pages 31 + 34
         byte[] SDMMACOffset = Utils.intTo3ByteArrayInversed(sdmMacOffset);      // e.g. 0x430000
         byte[] SDMMACInputOffset = Utils.intTo3ByteArrayInversed(sdmMacInputOffset); // e.g. 0x430000
+        log(methodName, printData("ENCPICCDataOffset", ENCPICCDataOffset));
+        log(methodName, printData("SDMMACOffset     ", SDMMACOffset));
+        log(methodName, printData("SDMMACInputOffset", SDMMACInputOffset));
+        /*
+        values using server data: https://sdm.nfcdeveloper.com/tag
+        ENCPICCDataOffset length: 3 data: 2a0000 (42d)
+        SDMMACOffset      length: 3 data: 500000 (80d)
+        SDMMACInputOffset length: 3 data: 500000 (80d)
+
+         */
         ByteArrayOutputStream baosCommandData = new ByteArrayOutputStream();
         baosCommandData.write(fileOption);
         baosCommandData.write(accessRightsRwCar);
