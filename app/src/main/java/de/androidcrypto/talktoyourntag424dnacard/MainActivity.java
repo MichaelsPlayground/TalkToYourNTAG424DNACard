@@ -15,6 +15,8 @@ import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.net.Uri;
+import android.nfc.NdefMessage;
+import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
@@ -111,7 +113,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
      * section for standard file handling
      */
 
-    private Button fileStandardWrite, fileStandardRead, fileStandardRead3;
+    private Button fileStandardWrite2, fileStandardWrite3, fileStandardRead, fileStandardRead2, fileStandardRead3;
     private com.google.android.material.textfield.TextInputEditText fileStandardFileId, fileStandardSize, fileStandardData;
     RadioButton rbFileFreeAccess, rbFileKeySecuredAccess;
 
@@ -342,8 +344,10 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
 
         // standard files
         fileStandardRead = findViewById(R.id.btnReadStandardFile);
+        fileStandardRead2 = findViewById(R.id.btnReadStandardFile2);
         fileStandardRead3 = findViewById(R.id.btnReadStandardFile3);
-        fileStandardWrite = findViewById(R.id.btnWriteStandardFile);
+        fileStandardWrite3 = findViewById(R.id.btnWriteStandardFile3);
+        fileStandardWrite2 = findViewById(R.id.btnWriteStandardFile2);
         fileStandardFileId = findViewById(R.id.etFileStandardFileId);
         fileStandardSize = findViewById(R.id.etFileStandardSize);
         fileStandardData = findViewById(R.id.etFileStandardData);
@@ -1296,6 +1300,33 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
             }
         });
 
+        fileStandardRead2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "read standard file 2";
+                writeToUiAppend(output, logString);
+
+                // check that an application was selected before
+                if (selectedApplicationId == null) {
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
+                    return;
+                }
+                byte[] fileContent = ntag424DnaMethods.readStandardFilePlain((byte) 0x02, 0, 128);
+                if ((fileContent == null) || (fileContent.length < 1)) {
+                    writeToUiAppend(output, logString + " FAILURE");
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with ErrorCode " +
+                            EV3.getErrorCode(ntag424DnaMethods.getErrorCode()), COLOR_RED);
+                    return;
+                } else {
+                    writeToUiAppend(output, "fileNumber: " + 2 + "\n" +
+                            Utils.printData("fileContent", fileContent));
+                    writeToUiAppend(output, outputDivider);
+                    vibrateShort();
+                }
+            }
+        });
+
         fileStandardRead3.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -1323,11 +1354,11 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
             }
         });
 
-        fileStandardWrite.setOnClickListener(new View.OnClickListener() {
+        fileStandardWrite3.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 clearOutputFields();
-                String logString = "write to a standard file";
+                String logString = "write to Standard file 3";
                 writeToUiAppend(output, logString);
 
                 //writeToUiAppend(output, "This is using the TEST_MODE");
@@ -1337,8 +1368,65 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
 
                 //byte[] dataToWrite = Utils.hexStringToByteArray("FFEE0102030405060708090A");
                 byte[] dataToWrite = Utils.generateTestData(128);
-                if ((dataToWrite != null) || (dataToWrite.length < 1)) {
+                if ((dataToWrite != null) && (dataToWrite.length > 0)) {
                     boolean success = ntag424DnaMethods.writeStandardFileFull((byte) 0x03, dataToWrite, 0, dataToWrite.length, false);
+                    writeToUiAppend(output, "REAL_MODE result: " + success);
+                    if (success) {
+                        writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
+                        vibrateShort();
+                    } else {
+                        writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with ErrorCode " +
+                                EV3.getErrorCode(ntag424DnaMethods.getErrorCode()), COLOR_RED);
+                    }
+                }
+            }
+        });
+
+        fileStandardWrite2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "write to Standard file 2";
+                writeToUiAppend(output, logString);
+
+                //writeToUiAppend(output, "This is using the TEST_MODE");
+
+                //boolean successTest = ntag424DnaMethods.writeStandardFileFull((byte) 0x03, "123".getBytes(StandardCharsets.UTF_8), 0, 3, true);
+                //writeToUiAppend(output, "TEST_MODE result: " + successTest);
+
+                // this is the example string from NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf page 31
+                // part 6.7.4 'Prepare NDEF message' of personalization example
+                // https://choose.url.com/ntag424?e=00000000000000000000000000000000&c=0000000000000000
+/*
+this way we construct the offsets:
+Step Command                       Data message
+1    NDEF File Content format:     https://choose.url.com/ntag424?e=00000000000000000000000000000000&c=0000000000000000
+2    NDEF File Content in Hex      63686F6F73652E75726C2E636F6D2F6E7461673432343F653D303030303030303030303030303030303030303030303030303030303030303026633D30303030303030303030303030303030000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+3    NDEF Length + NDEF header     0051 + D1014D5504
+4    Size of data – useful for
+     Lc in APDUs                   80 (128d)
+8    UID Offset (in Bytes)         20 (49d) (NDEF Length + NDEF header Length + NDEF File Content Length, including “=” sign in “? e=”)
+10   CMAC Input Offset (in Bytes)  43 (67d) - Fully configurable. Verification side (e.g. backend) needs to know this value in order to check validity of received CMAC.
+11   CMAC Offset (in Bytes)        43 (67d) - including “=” sign in “&c=”)
+
+ */
+                //String ndefSampleBackendUrl = "https://sdm.nfcdeveloper.com/tag?picc_data=00000000000000000000000000000000&cmac=0000000000000000";
+                String ndefSampleBackendUrl = "https://choose.url.com/ntag424?e=00000000000000000000000000000000&c=0000000000000000";
+                NdefRecord ndefRecord = NdefRecord.createUri(ndefSampleBackendUrl);
+                NdefMessage ndefMessage = new NdefMessage(ndefRecord);
+                byte[] ndefMessageBytesHeadless = ndefMessage.toByteArray();
+                // now we do have the NDEF message but it needs to get wrapped by '0x00 || (byte) (length of NdefMessage)
+                byte[] ndefMessageBytes = new byte[ndefMessageBytesHeadless.length + 2];
+                System.arraycopy(new byte[]{(byte) 0x00, (byte) (ndefMessageBytesHeadless.length)}, 0, ndefMessageBytes, 0, 2);
+                System.arraycopy(ndefMessageBytesHeadless, 0, ndefMessageBytes, 2, ndefMessageBytesHeadless.length);
+                Log.d(TAG, printData("NDEF Message bytes", ndefMessageBytes));
+                byte[] dataToWrite = ndefMessageBytes.clone();
+                /*
+                //byte[] dataToWrite = Utils.hexStringToByteArray("FFEE0102030405060708090A");
+                byte[] dataToWrite = Utils.generateTestData(10);
+                 */
+                if ((dataToWrite != null) && (dataToWrite.length > 0)) {
+                    boolean success = ntag424DnaMethods.writeStandardFilePlain((byte) 0x02, dataToWrite, 0, dataToWrite.length);
                     writeToUiAppend(output, "REAL_MODE result: " + success);
                     if (success) {
                         writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
@@ -1615,7 +1703,8 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
             @Override
             public void onClick(View view) {
                 clearOutputFields();
-                String logString = "change the fileSettings file 03 (fixed)";
+                //String logString = "change the fileSettings file 03 (fixed)";
+                String logString = "change the fileSettings file 02 (fixed)";
                 writeToUiAppend(output, logString);
 
                 /*
@@ -1633,7 +1722,11 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                     writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE", COLOR_RED);
                     return;
                 }
-                byte fileIdByte = STANDARD_FILE_ENCRYPTED_NUMBER;
+
+                // this part is for file number 03 = encrypted proprietary standard file
+                //byte fileIdByte = STANDARD_FILE_ENCRYPTED_NUMBER;
+                //boolean success = ntag424DnaMethods.changeFileSettings(fileIdByte, Ntag424DnaMethods.CommunicationSettings.Full, 3,0, 2, 3, false);
+                //boolean success = ntag424DnaMethods.changeFileSettings(fileIdByte, Ntag424DnaMethods.CommunicationSettings.Full, 1,2, 3, 4, false);
 /*
 fileNumber: 03
 fileType: 0 (Standard)
@@ -1646,10 +1739,26 @@ accessRights R:        2
 accessRights W:        3
 fileSize: 128
  */
-                byte[] responseData = new byte[2];
 
-                boolean success = ntag424DnaMethods.changeFileSettings(fileIdByte, Ntag424DnaMethods.CommunicationSettings.Full, 3,0, 2, 3, false);
+/*
+fileNumber: 02
+fileType: 0 (Standard)
+communicationSettings: 00 (Plain)
+accessRights RW | CAR: E0
+accessRights R  | W:   EE
+accessRights RW:       14
+accessRights CAR:      0
+accessRights R:        14
+accessRights W:        14
+fileSize: 256
+ */
+
+                // this part is for file number 02 = NDEF data file
+                byte fileIdByte = Ntag424DnaMethods.STANDARD_FILE_NUMBER_02;
+                // enable SDM and mirroring
+                boolean success = ntag424DnaMethods.changeFileSettings(fileIdByte, Ntag424DnaMethods.CommunicationSettings.Full, 0,0, 14, 0, true);
                 //boolean success = ntag424DnaMethods.changeFileSettings(fileIdByte, Ntag424DnaMethods.CommunicationSettings.Full, 1,2, 3, 4, false);
+                byte[] responseData = new byte[2];
                 responseData = ntag424DnaMethods.getErrorCode();
                 if (success) {
                     writeToUiAppend(output, logString + " SUCCESS");

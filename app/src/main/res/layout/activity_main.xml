@@ -375,6 +375,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
                         android:enabled="true"
                         android:text="chg file sett" />
@@ -874,22 +875,22 @@
                         android:text="read 3" />
 
                     <Button
-                        android:id="@+id/btnWriteStandardFile"
+                        android:id="@+id/btnWriteStandardFile3"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
                         android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
-                        android:text="write" />
+                        android:text="write 3" />
 
                     <Button
-                        android:id="@+id/btnReadStandardFile"
+                        android:id="@+id/btnReadStandardFilex"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
                         android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
-                        android:text="read" />
+                        android:text="x" />
 
                 </LinearLayout>
 
@@ -899,23 +900,25 @@
                     android:orientation="horizontal">
 
                     <Button
-                        android:id="@+id/btnXXX3"
+                        android:id="@+id/btnReadStandardFile2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginRight="8dp"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
-                        android:text="xxx" />
+                        android:text="read 2" />
 
                     <Button
-                        android:id="@+id/btnWriteStandardFileOld"
+                        android:id="@+id/btnWriteStandardFile2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
-                        android:text="write O" />
+                        android:text="write 2" />
 
                     <Button
-                        android:id="@+id/btnReadStandardFileOld"
+                        android:id="@+id/btnReadStandardFile"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"

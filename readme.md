@@ -98,3 +98,88 @@ todo check with real tag if fileSettings are "prepared" for SDM usage
 see page 4 of video/slideshow https://www.slideshare.net/NXPMIFARETeam/secure-dynamic-messaging-feature
 "The SDM feature is enablement is done during the creation of the NDEF file, a Standard Data File inside the Mifare DESFire application"
 
+## Enabling Secure Dynamic Messaging (SDM) on a NTAG 424 DNA and mirroring UID and ReadCounter
+
+TagInfo output for a NTAG 424 DNA with enabled SDM using example values from NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf
+
+```plaintext
+-- NDEF ------------------------------
+
+# NFC data set information:
+NDEF message containing 1 record
+Current message size: 81 bytes
+Maximum message size: 254 bytes
+NFC data set access: Read & Write
+
+# Record #1: URI record:
+Type Name Format: NFC Forum well-known type
+Short Record
+type: "U"
+protocol field: https://
+URI field: choose.url.com/ntag424?e=51BAE81E642E493945321C815A200075&c=2446E527C37E073A
+Payload length: 77 bytes
+Payload data:
+
+[00] 04 63 68 6F 6F 73 65 2E 75 72 6C 2E 63 6F 6D 2F |.choose.url.com/|
+[10] 6E 74 61 67 34 32 34 3F 65 3D 35 31 42 41 45 38 |ntag424?e=51BAE8|
+[20] 31 45 36 34 32 45 34 39 33 39 34 35 33 32 31 43 |1E642E493945321C|
+[30] 38 31 35 41 32 30 30 30 37 35 26 63 3D 32 34 34 |815A200075&c=244|
+[40] 36 45 35 32 37 43 33 37 45 30 37 33 41          |6E527C37E073A   |
+
+# NDEF message:
+[00] D1 01 4D 55 04 63 68 6F 6F 73 65 2E 75 72 6C 2E |..MU.choose.url.|
+[10] 63 6F 6D 2F 6E 74 61 67 34 32 34 3F 65 3D 35 31 |com/ntag424?e=51|
+[20] 42 41 45 38 31 45 36 34 32 45 34 39 33 39 34 35 |BAE81E642E493945|
+[30] 33 32 31 43 38 31 35 41 32 30 30 30 37 35 26 63 |321C815A200075&c|
+[40] 3D 32 34 34 36 45 35 32 37 43 33 37 45 30 37 33 |=2446E527C37E073|
+[50] 41                                              |A               |
+
+# Configuration Information:
+Secure Dynamic Messaging: Enabled
+UID Mirroring: Enabled
+SDM Read Counter: Enabled
+SDM Read Counter Limit: Disabled
+Encrypted File Data Mirroring: Disabled
+
+Application configuration (DF 0xD2760000850101):
+* Default AppMasterKey
+* Key configuration:
+  - 5 mutable AES 128 bit AppKeys
+  
+Settings for file 02:
+* FileType: StandardData file
+* Secure Dynamic Messaging: enabled
+* Communication mode: plain
+
+* Permissions:
+	- ReadWrite: with key 0x0
+	- Change: with key 0x0
+	- Read: free access
+	- Write: with key 0x0
+
+* File size: 256 bytes
+
+* SDM mirror options: 
+	- UID mirror enabled
+	- SDMReadCtr enabled
+	- ASCII encoding
+
+* SDM Access rights:
+	- SDMCtrRet permissions: with key 0x1
+	- Meta Read: PICCData mirror encrypted with key 0x2
+	- File Read: with key 0x1
+* PICCData mirror offset: 0x200000
+* SDM MAC input offset: 0x430000
+* SDM MAC mirror offset: 0x430000  
+
+[000]   00 51 D1 01 4D 55 04 63 68 6F 6F 73 65 2E 75 72 |.Q..MU.choose.ur|
+[010]   6C 2E 63 6F 6D 2F 6E 74 61 67 34 32 34 3F 65 3D |l.com/ntag424?e=|
+[020]   30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 |0000000000000000|
+[030]   30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 |0000000000000000|
+[040]   26 63 3D 30 30 30 30 30 30 30 30 30 30 30 30 30 |&c=0000000000000|
+[050]   30 30 30 00 00 00 00 00 00 00 00 00 00 00 00 00 |000.............|
+
+```
+
+
+
