@@ -272,7 +272,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
 
     private String exportString = "Desfire Authenticate Legacy"; // takes the log data for export
     private String exportStringFileName = "auth.html"; // takes the log data for export
-
+    public static String NDEF_BACKEND_URL = "https://sdm.nfcdeveloper.com/tag"; // filled by writeStandardFile2
 
     // DesfireAuthentication is used for all authentication tasks. The constructor needs the isoDep object so it is initialized in 'onTagDiscovered'
     DesfireAuthenticate desfireAuthenticate;
@@ -466,7 +466,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 // EncPICC data offset: 41 SDMMAC  data offset: 79
                 // val's from feature:  32                      67
                 //                      -9                     -12
-                aa
+
                 baseUrl = "https://sdm.nfcdeveloper.com/tag/";
                 ndefForSdm = new NdefForSdm(baseUrl);
                 String newBaseUrl = ndefForSdm.getUrlBase();
@@ -1455,9 +1455,19 @@ Step Command                       Data message
 11   CMAC Offset (in Bytes)        43 (67d) - including “=” sign in “&c=”)
 
  */
+
                 //String ndefSampleBackendUrl = "https://sdm.nfcdeveloper.com/tag?picc_data=00000000000000000000000000000000&cmac=0000000000000000";
-                String ndefSampleBackendUrl = "https://choose.url.com/ntag424?e=00000000000000000000000000000000&c=0000000000000000";
-                NdefRecord ndefRecord = NdefRecord.createUri(ndefSampleBackendUrl);
+                //String ndefSampleBackendUrl = "https://choose.url.com/ntag424?e=00000000000000000000000000000000&c=0000000000000000";
+
+                String baseUrl = "https://sdm.nfcdeveloper.com/tag";
+                NdefForSdm ndefForSdm = new NdefForSdm(baseUrl);
+                NDEF_BACKEND_URL = ndefForSdm.urlBuilder();
+                writeToUiAppend(output, "templateUrl: " + NDEF_BACKEND_URL + ( " length: " + NDEF_BACKEND_URL.length()));
+                writeToUiAppend(output, "EncPICC data offset: " + ndefForSdm.getOffsetEncryptedPiccData());
+                writeToUiAppend(output, "SDMMAC  data offset: " + ndefForSdm.getOffsetSDMMACData());
+
+                NdefRecord ndefRecord = NdefRecord.createUri(NDEF_BACKEND_URL);
+                //NdefRecord ndefRecord = NdefRecord.createUri(ndefSampleBackendUrl);
                 NdefMessage ndefMessage = new NdefMessage(ndefRecord);
                 byte[] ndefMessageBytesHeadless = ndefMessage.toByteArray();
                 // now we do have the NDEF message but it needs to get wrapped by '0x00 || (byte) (length of NdefMessage)
@@ -1803,7 +1813,16 @@ fileSize: 256
                 // enable SDM and mirroring
                 //boolean success = ntag424DnaMethods.changeFileSettings(fileIdByte, Ntag424DnaMethods.CommunicationSettings.Plain, 0,0, 14, 0, true);
                 // disable SDM and mirroring
-                boolean success = ntag424DnaMethods.changeFileSettings(fileIdByte, Ntag424DnaMethods.CommunicationSettings.Plain, 14,0, 14, 14, false);
+                //boolean success = ntag424DnaMethods.changeFileSettings(fileIdByte, Ntag424DnaMethods.CommunicationSettings.Plain, 14,0, 14, 14, false);
+
+                // this is using a more flexible way - use the  NdefForSdm class
+                // you should use writeStandardFile2 to update the data if you are not using the sample data url
+                NdefForSdm ndefForSdm = new NdefForSdm(NDEF_BACKEND_URL);
+                String url = ndefForSdm.urlBuilder();
+                int encPiccOffset = ndefForSdm.getOffsetEncryptedPiccData();
+                int sdmMacOffset = ndefForSdm.getOffsetSDMMACData(); // I'm using the equals value for sdmMacInputOffset
+                boolean success = ntag424DnaMethods.changeFileSettings(fileIdByte, Ntag424DnaMethods.CommunicationSettings.Plain, 0,0, 14, 0, true, encPiccOffset, sdmMacOffset, sdmMacOffset);
+                //boolean success = ntag424DnaMethods.changeFileSettings(fileIdByte, Ntag424DnaMethods.CommunicationSettings.Plain, 14,0, 14, 14, false);
 
                 byte[] responseData = new byte[2];
                 responseData = ntag424DnaMethods.getErrorCode();

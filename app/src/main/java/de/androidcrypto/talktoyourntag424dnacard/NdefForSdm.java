@@ -97,7 +97,8 @@ public class NdefForSdm {
             Log.e(TAG, "could not find the position of the data, aborted");
             return -1;
         }
-        return (pos + parameterString.length());
+        final int positionCorrection = 1;
+        return (pos + parameterString.length() - positionCorrection);
     }
 
     public int getOffsetSDMMACData() {
@@ -115,7 +116,8 @@ public class NdefForSdm {
             Log.e(TAG, "could not find the position of the data, aborted");
             return -1;
         }
-        return (pos + parameterString.length());
+        final int positionCorrection = 1;
+        return (pos + parameterString.length() - positionCorrection);
     }
 
     public String getUrlTemplate() {
