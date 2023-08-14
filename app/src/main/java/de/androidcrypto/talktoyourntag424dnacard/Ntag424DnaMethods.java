@@ -2031,6 +2031,27 @@ PERMISSION_DENIED
         return rndAEqual;
     }
 
+    /**
+     * There are 2 authentication mode available on a NTAG 424 DNA tag: AES and LRP (Leakage Resilient Primitive).
+     * This is an irreversible action and permanently disables AES secure messaging, meaning
+     * LRP secure messaging is required to be used for all future sessions.
+     * Please use this method with care - there is no way back to AES secure messaging mode !
+     * @return true on success
+     */
+
+    public boolean changeAuthenticationModeToLrp() {
+
+        /**
+         * see NTAG 424 DNA NT4H2421Gx.pdf 'SetConfiguration' command on pages 55 - 57
+         * see Mifare DESFire Light Features and Hints AN12343.pdf pages 43 + 44 for example code
+         * see MIFARE DESFire Light contactless application IC MF2DLHX0.pdf 'SetConfiguration' command on pages 61 - 66
+         */
+
+        // at the moment this is just a stub with not action !
+
+        return false;
+    }
+
     public List<byte[]> getReadAllFileContents() {
         List<byte[]> contentList = new ArrayList<>();
         //byte[] content = readStandardFileFull(STANDARD_FILE_NUMBER_01, 0, 32);
