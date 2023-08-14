@@ -1345,6 +1345,258 @@ PERMISSION_DENIED
     }
 
     /**
+     * Note: to run LRP tasks the PICC has to be in LRP mode. You can find code for this mode
+     * in Mifare DESFire Light Features and Hints AN12343.pdf pages 43 + 44
+     * This is an IRREVERSIBLE action and PERMANENTLY disables AES secure messaging, meaning
+     * LRP secure messaging is required to be used for all future sessions.
+     * As I'm on limited resources (number of DESFire EV2/EV3 tags I'm skipping any experiments
+     * on this feature,sorry.
+     *
+     * see MIFARE DESFire Light contactless application IC MF2DLHX0.pdf page 24
+     * (Table 18 Secure messaging mode negotiation)
+     *
+     * Reader is asking the mode    || PICC is in mode xx and answers as follows
+     * PCD is requesting | PDCap2.1 || PDCap2    | PICC answers       | Comments
+     * mode:             | value    || value     |                    |
+     * ------------------|----------||-----------|--------------------|-------------------------
+     * EV2 Secure        |   00h    || 00h (AES) | 17 bytes with AFh  | reader and PICC use AES
+     * Messaging (AES)   |          ||           | (16 bytes rndB)    |
+     * ------------------|----------||-----------|--------------------|-------------------------
+     * EV2 Secure        |   00h    || 02h (LRP) | Permission denied  | no authentication
+     * Messaging (AES)   |          ||           |                    | available possible
+     * ------------------|----------||-----------|--------------------|-------------------------
+     * ------------------|----------||-----------|--------------------|-------------------------
+     * LRP Secure        |   02h    || 00h (AES) | 1 byte with AFh    | no authentication but
+     * Messaging         |          ||           |                    | reader can use AES next
+     * ------------------|----------||-----------|--------------------|-------------------------
+     * LRP Secure        |   02h    || 02h (LRP) | 18 bytes with AFh  | reader and PICC use LRP
+     * Messaging         |          ||           | (1 byte auth mode  |
+     *                   |          ||           | (16 bytes rndB     |
+     * ------------------|----------||-----------|--------------------|-------------------------
+     *
+     * So in short: you can test LRP when PICC is in LRP mode only
+     *
+     */
+
+    public boolean authenticateLrpEv2First(byte keyNo, byte[] key) {
+
+        /**
+         * see MIFARE DESFire Light contactless application IC.pdf, pages 37 ff and 55ff
+         * see pages 44 ff for detailed example
+         * SessionKeys example: pages 48 - 50
+         *
+         * MIFARE DESFire Light contactless application IC MF2DLHX0.pdf page 57 - 60
+         *
+         * Purpose: To start a new transaction
+         * Capability Bytes: PCD and PICC capability bytes are exchanged (PDcap2, PCDcap2)
+         * Transaction Identifier: A new transaction identifier is generated which remains valid for the full transaction
+         * Command Counter: CmdCtr is reset to 0x0000
+         * Session Keys: New session keys are generated
+         */
+
+        // see example in Mifare DESFire Light Features and Hints AN12343.pdf pages 33 ff
+        // and MIFARE DESFire Light contactless application IC MF2DLHX0.pdf pages 52 ff
+        logData = "";
+        invalidateAllData();
+        final String methodName = "authenticateLrpEv2First";
+        log(methodName, printData("key", key) + " keyNo: " + keyNo, true);
+        errorCode = new byte[2];
+        // sanity checks
+        if (keyNo < 0) {
+            Log.e(TAG, methodName + " keyNumber is < 0, aborted");
+            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            return false;
+        }
+        if (keyNo > 14) {
+            Log.e(TAG, methodName + " keyNumber is > 14, aborted");
+            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            return false;
+        }
+        if ((key == null) || (key.length != 16)) {
+            Log.e(TAG, methodName + " data length is not 16, aborted");
+            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            return false;
+        }
+        if ((isoDep == null) || (!isoDep.isConnected())) {
+            Log.e(TAG, methodName + " lost connection to the card, aborted");
+            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            return false;
+        }
+        log(methodName, "step 01 get encrypted rndB from card", false);
+        log(methodName, "This method is using the AUTHENTICATE_AES_EV2_FIRST_COMMAND so it will work with AES-based applications only", false);
+        // authenticate 1st part
+        byte[] apdu;
+        byte[] response = new byte[0];
+        try {
+            /**
+             * note: the parameter needs to be a 2 byte long value, the first one is the key number and the second
+             * one could any LEN capability ??
+             * I'm setting the byte[] to keyNo | 0x00
+             */
+            byte LRP_INDICATOR = (byte) 0x02;
+            byte[] PCDCAP_2_1 = new byte[5];
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            baos.write(keyNo);
+            baos.write((byte) 0x06); // length of following cap (LenCap)
+            baos.write(LRP_INDICATOR);
+            baos.write(PCDCAP_2_1, 0, PCDCAP_2_1.length);
+            byte[] commandParameter = baos.toByteArray();
+            log(methodName, printData("commandParameter", commandParameter));
+            apdu = wrapMessage(AUTHENTICATE_EV2_FIRST_COMMAND, commandParameter);
+            log(methodName, "get enc rndB " + printData("apdu", apdu));
+            response = sendData(apdu);
+            log(methodName, "get enc rndB " + printData("response", response));
+        } catch (IOException e) {
+            Log.e(TAG, methodName + " transceive failed, IOException:\n" + e.getMessage());
+            log(methodName, "IOException: " + e.getMessage());
+            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            return false;
+        }
+        byte[] responseBytes = returnStatusBytes(response);
+        System.arraycopy(responseBytes, 0, errorCode, 0, 2);
+        // we are expecting that the status code is 0xAF means more data need to get exchanged
+        if (!checkResponseMoreData(responseBytes)) {
+            log(methodName, "expected to get get 0xAF as error code but  found: " + printData("errorCode", responseBytes) + ", aborted");
+            System.arraycopy(responseBytes, 0, errorCode, 0, 2);
+            return false;
+        }
+        // response: 05e8942501c8349464eacb3811bf586a 91af (18 bytes)
+        // PICC not in LRP mode - the tag answers with 16 bytes RndB || 91 AF
+        // response is NOT: AuthMode || PICC challenge RndB || status code AF = more data
+        // auth mode 01 means LRP mode, 00 is fall back to AES
+
+        // now we know that we can work with the response, 16 bytes long
+        // R-APDU (Part 1) (E(Kx, RndB)) || SW1 || SW2
+        byte[] rndB_enc = getData(response);
+        log(methodName, printData("encryptedRndB", rndB_enc));
+
+        // start the decryption
+        //byte[] iv0 = new byte[8];
+        byte[] iv0 = new byte[16];
+        log(methodName, "step 02 iv0 is 16 zero bytes " + printData("iv0", iv0));
+        log(methodName, "step 03 decrypt the encryptedRndB using AES.decrypt with key " + printData("key", key) + printData(" iv0", iv0));
+        byte[] rndB = AES.decrypt(iv0, key, rndB_enc);
+        log(methodName, printData("rndB", rndB));
+
+        log(methodName, "step 04 rotate rndB to LEFT");
+        byte[] rndB_leftRotated = rotateLeft(rndB);
+        log(methodName, printData("rndB_leftRotated", rndB_leftRotated));
+
+        // authenticate 2nd part
+        log(methodName, "step 05 generate a random rndA");
+        byte[] rndA = new byte[16]; // this is an AES key
+        rndA = getRandomData(rndA);
+        log(methodName, printData("rndA", rndA));
+
+        log(methodName, "step 06 concatenate rndA | rndB_leftRotated");
+        byte[] rndArndB_leftRotated = concatenate(rndA, rndB_leftRotated);
+        log(methodName, printData("rndArndB_leftRotated", rndArndB_leftRotated));
+
+        // IV is now encrypted RndB received from the tag
+        log(methodName, "step 07 iv1 is 16 zero bytes");
+        byte[] iv1 = new byte[16];
+        log(methodName, printData("iv1", iv1));
+
+        // Encrypt RndAB_rot
+        log(methodName, "step 08 encrypt rndArndB_leftRotated using AES.encrypt and iv1");
+        byte[] rndArndB_leftRotated_enc = AES.encrypt(iv1, key, rndArndB_leftRotated);
+        log(methodName, printData("rndArndB_leftRotated_enc", rndArndB_leftRotated_enc));
+
+        // send encrypted data to PICC
+        log(methodName, "step 09 send the encrypted data to the PICC");
+        try {
+            apdu = wrapMessage(GET_ADDITIONAL_FRAME_COMMAND, rndArndB_leftRotated_enc);
+            log(methodName, "send rndArndB_leftRotated_enc " + printData("apdu", apdu));
+            response = isoDep.transceive(apdu);
+            log(methodName, "send rndArndB_leftRotated_enc " + printData("response", response));
+        } catch (IOException e) {
+            Log.e(TAG, methodName + " transceive failed, IOException:\n" + e.getMessage());
+            log(methodName, "IOException: " + e.getMessage());
+            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            return false;
+        }
+        responseBytes = returnStatusBytes(response);
+        System.arraycopy(responseBytes, 0, errorCode, 0, 2);
+        // we are expecting that the status code is 0x00 means the exchange was OK
+        if (!checkResponse(responseBytes)) {
+            log(methodName, "expected to get get 0x00 as error code but  found: " + printData("errorCode", responseBytes) + ", aborted");
+            System.arraycopy(responseBytes, 0, errorCode, 0, 2);
+            return false;
+        }
+        // now we know that we can work with the response, response is 32 bytes long
+        // R-APDU (Part 2) E(Kx, TI || RndA' || PDcap2 || PCDcap2) || Response Code
+        log(methodName, "step 10 received encrypted data from PICC");
+        byte[] data_enc = getData(response);
+        log(methodName, printData("data_enc", data_enc));
+
+        //IV is now reset to zero bytes
+        log(methodName, "step 11 iv2 is 16 zero bytes");
+        byte[] iv2 = new byte[16];
+        log(methodName, printData("iv2", iv2));
+
+        // Decrypt encrypted data
+        log(methodName, "step 12 decrypt data_enc with iv2 and key");
+        byte[] data = AES.decrypt(iv2, key, data_enc);
+        log(methodName, printData("data", data));
+        // data is 32 bytes long, e.g. a1487b61f69cef65a09742b481152325a7cb8fc6000000000000000000000000
+        /**
+         * structure of data
+         * full example a1487b61f69cef65a09742b481152325a7cb8fc6000000000000000000000000
+         *
+         * TI transaction information 04 bytes a1487b61
+         * rndA LEFT rotated          16 bytes f69cef65a09742b481152325a7cb8fc6
+         * PDcap2                     06 bytes 000000000000
+         * PCDcap2                    06 bytes 000000000000
+         */
+
+        // split data
+        byte[] ti = new byte[4]; // LSB notation
+        byte[] rndA_leftRotated = new byte[16];
+        byte[] pDcap2 = new byte[6];
+        byte[] pCDcap2 = new byte[6];
+        System.arraycopy(data, 0, ti, 0, 4);
+        System.arraycopy(data, 4, rndA_leftRotated, 0, 16);
+        System.arraycopy(data, 20, pDcap2, 0, 6);
+        System.arraycopy(data, 26, pCDcap2, 0, 6);
+        log(methodName, "step 13 full data needs to get split up in 4 values");
+        log(methodName, printData("data", data));
+        log(methodName, printData("ti", ti));
+        log(methodName, printData("rndA_leftRotated", rndA_leftRotated));
+        log(methodName, printData("pDcap2", pDcap2));
+        log(methodName, printData("pCDcap2", pCDcap2));
+
+        // PCD compares send and received RndA
+        log(methodName, "step 14 rotate rndA_leftRotated to RIGHT");
+        byte[] rndA_received = rotateRight(rndA_leftRotated);
+        log(methodName, printData("rndA_received ", rndA_received));
+        boolean rndAEqual = Arrays.equals(rndA, rndA_received);
+        //log(methodName, printData("rndA received ", rndA_received));
+        log(methodName, printData("rndA          ", rndA));
+        log(methodName, "rndA and rndA received are equal: " + rndAEqual);
+        log(methodName, printData("rndB          ", rndB));
+
+        log(methodName, "**** auth result ****");
+        if (rndAEqual) {
+            log(methodName, "*** AUTHENTICATED ***");
+            SesAuthENCKey = getSesAuthEncKey(rndA, rndB, key);
+            SesAuthMACKey = getSesAuthMacKey(rndA, rndB, key);
+            log(methodName, printData("SesAuthENCKey ", SesAuthENCKey));
+            log(methodName, printData("SesAuthMACKey ", SesAuthMACKey));
+            CmdCounter = 0;
+            TransactionIdentifier = ti.clone();
+            authenticateEv2FirstSuccess = true;
+            keyNumberUsedForAuthentication = keyNo;
+        } else {
+            log(methodName, "****   FAILURE   ****");
+            invalidateAllData();
+        }
+        log(methodName, "*********************");
+        return rndAEqual;
+    }
+
+
+
+    /**
      * authenticateAesEv2First uses the EV2First authentication method with command 0x71
      *
      * @param keyNo (00..14) but maximum is defined during application setup

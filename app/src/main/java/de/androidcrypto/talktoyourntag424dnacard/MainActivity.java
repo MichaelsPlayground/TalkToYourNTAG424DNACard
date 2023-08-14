@@ -724,7 +724,11 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 exportStringFileName = "auth.html";
 
                 byte[] responseData = new byte[2];
-                boolean success = ntag424DnaMethods.authenticateAesEv2First(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_AES_DEFAULT);
+                //boolean success = ntag424DnaMethods.authenticateAesEv2First(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_AES_DEFAULT);
+
+                // just a short test on LRP, not working
+                boolean success = ntag424DnaMethods.authenticateLrpEv2First(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_AES_DEFAULT);
+
                 responseData = ntag424DnaMethods.getErrorCode();
                 if (success) {
                     writeToUiAppend(output, logString + " SUCCESS");

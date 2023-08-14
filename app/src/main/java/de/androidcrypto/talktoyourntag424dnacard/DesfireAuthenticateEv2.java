@@ -8,6 +8,7 @@ import static de.androidcrypto.talktoyourntag424dnacard.Utils.intTo4ByteArrayInv
 
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
+import android.nfc.TagLostException;
 import android.nfc.tech.IsoDep;
 import android.util.Log;
 import android.widget.TextView;
@@ -3350,7 +3351,6 @@ Executing Cmd.SetConfiguration in CommMode.Full and Option 0x09 for updating the
         }
     }
 
-
     /**
      * authenticateAesEv2First uses the EV2First authentication method with command 0x71
      *
@@ -6160,6 +6160,32 @@ F121h = SDMAccessRights (RFU: 0xF, FileAR.SDMCtrRet = 0x1, FileAR.SDMMetaRead: 0
     /**
      * section for command and response handling
      */
+
+    private byte[] sendData(byte[] apdu) {
+        String methodName = "sendData";
+        if (isoDep == null) {
+            Log.e(TAG, methodName + " isoDep is NULL");
+            log(methodName, "isoDep is NULL, aborted");
+            return null;
+        }
+        log(methodName, printData("send apdu -->", apdu));
+        byte[] recvBuffer;
+        try {
+            recvBuffer = isoDep.transceive(apdu);
+        } catch (TagLostException e) {
+            //errorCodeReason = "TagLostException: " + e.getMessage();
+            Log.e(TAG, e.getMessage());
+            e.printStackTrace();
+            return null;
+        } catch (IOException e) {
+            //errorCodeReason = "IOException: " + e.getMessage();
+            Log.e(TAG, e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+        log(methodName, printData("received  <--", recvBuffer));
+        return recvBuffer;
+    }
 
     private byte[] wrapMessage(byte command, byte[] parameters) throws IOException {
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
