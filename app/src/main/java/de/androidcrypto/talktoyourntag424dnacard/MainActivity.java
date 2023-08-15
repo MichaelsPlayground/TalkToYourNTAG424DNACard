@@ -101,6 +101,11 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     private Button changeKeyD3AtoD3AC, changeKeyD3ACtoD3A;
     private Button enableTransactionTimerEv2;
 
+    /**
+     * section for auth using LRP with default keys
+     */
+
+    private Button authD0LEv2, authD2LEv2, authD3LEv2, authD4LEv2;
 
     /**
      * section for SDM tasks
@@ -333,6 +338,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         getFileSettingsEv2 = findViewById(R.id.btnGetFileSettingsEv2);
 
         testEnableLrpMode = findViewById(R.id.btnTestLrpEnable);
+        authD0LEv2 = findViewById(R.id.btnAuthD0LEv2);
 
         // methods for sdm
         createNdefFile256Ev2 = findViewById(R.id.btnCreateNdef256);
@@ -919,6 +925,63 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 } else {
                     writeToUiAppend(output, logString + " FAILURE");
                     writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE", COLOR_RED);
+                }
+            }
+        });
+
+        /**
+         * section for LRP authentication using authenticationLrpEv2First
+         */
+
+        authD0LEv2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // authenticate with the read access key = 03...
+                clearOutputFields();
+                String logString = "LRP EV2 First authenticate with DEFAULT AES key number 0x00 = application master key";
+                writeToUiAppend(output, logString);
+                if (selectedApplicationId == null) {
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
+                    return;
+                }
+
+                // run a self test
+                //boolean getSesAuthKeyTestResult = desfireAuthenticateEv2.getSesAuthKeyTest();
+                //writeToUiAppend(output, "getSesAuthKeyTestResult: " + getSesAuthKeyTestResult);
+
+                exportString = "";
+                exportStringFileName = "auth.html";
+
+                byte[] responseData = new byte[2];
+                boolean success = ntag424DnaMethods.authenticateLrpEv2First(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_AES_DEFAULT);
+
+                // just a short test on LRP, is working but running "old" AES secure messaging as long the card is not in LRP mode
+                //boolean success = ntag424DnaMethods.authenticateLrpEv2First(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_AES_DEFAULT);
+
+                responseData = ntag424DnaMethods.getErrorCode();
+                if (success) {
+                    writeToUiAppend(output, logString + " SUCCESS");
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
+                    SES_AUTH_ENC_KEY = ntag424DnaMethods.getSesAuthENCKey();
+                    SES_AUTH_MAC_KEY = ntag424DnaMethods.getSesAuthMACKey();
+                    TRANSACTION_IDENTIFIER = ntag424DnaMethods.getTransactionIdentifier();
+                    CMD_COUNTER = ntag424DnaMethods.getCmdCounter();
+                    writeToUiAppend(output, printData("SES_AUTH_ENC_KEY", SES_AUTH_ENC_KEY));
+                    writeToUiAppend(output, printData("SES_AUTH_MAC_KEY", SES_AUTH_MAC_KEY));
+                    writeToUiAppend(output, printData("TRANSACTION_IDENTIFIER", TRANSACTION_IDENTIFIER));
+                    writeToUiAppend(output, "CMD_COUNTER: " + CMD_COUNTER);
+                    writeToUiAppend(output, "key used for auth: " + ntag424DnaMethods.getKeyNumberUsedForAuthentication());
+                    vibrateShort();
+                    // show logData
+
+                    // prepare data for export
+                    exportString = ntag424DnaMethods.getLogData();
+                    exportStringFileName = "auth0a_ev2.html";
+                    writeToUiToast("your authentication log file is ready for export");
+
+                    //showDialog(MainActivity.this, desfireAuthenticateProximity.getLogData());
+                } else {
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
                 }
             }
         });

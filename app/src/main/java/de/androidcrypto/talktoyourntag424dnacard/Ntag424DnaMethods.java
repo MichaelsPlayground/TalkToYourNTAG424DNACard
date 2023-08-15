@@ -1448,6 +1448,8 @@ PERMISSION_DENIED
             log(methodName, "get enc rndB " + printData("apdu", apdu));
             response = sendData(apdu);
             log(methodName, "get enc rndB " + printData("response", response));
+            // response: 013622ab415702ff1684c94fb2f9f517dc91af
+            // response 01 = tag is in LRP mode || rndB (16 bytes) || status code (2 bytes)
         } catch (IOException e) {
             Log.e(TAG, methodName + " transceive failed, IOException:\n" + e.getMessage());
             log(methodName, "IOException: " + e.getMessage());
@@ -1469,7 +1471,8 @@ PERMISSION_DENIED
 
         // now we know that we can work with the response, 16 bytes long
         // R-APDU (Part 1) (E(Kx, RndB)) || SW1 || SW2
-        byte[] rndB_enc = getData(response);
+        //byte[] rndB_enc =  getData(response);
+        byte[] rndB_enc = Arrays.copyOfRange(getData(response), 1, response.length - 2);
         log(methodName, printData("encryptedRndB", rndB_enc));
 
         // start the decryption
