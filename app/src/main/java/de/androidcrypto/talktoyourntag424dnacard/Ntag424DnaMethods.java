@@ -1824,7 +1824,7 @@ PERMISSION_DENIED
             byte[] t03CiphertextExp = hexStringToByteArrayMinus("AC-20-D3-9F-53-41-FE-98-DF-CA-21-DA-86-BA-79-14");
             if (!compareArrays(t03Ciphertext, t03CiphertextExp, "t03Ciphertext"));
 
-            // P[0]: AC-20-D3-9F-53-41-FE-98-DF-CA-21-DA-86-BA-79-14 =
+            // P[0]: AC-20-D3-9F-53-41-FE-98-DF-CA-21-DA-86-BA-79-14 = t03Ciphertext
             byte[] tPlaintext0 = t03Ciphertext.clone();
             // AES block key is t01Ciphertext
             // Input plaintext is data0x55
@@ -1839,10 +1839,10 @@ PERMISSION_DENIED
             byte[] t05CiphertextExp = hexStringToByteArrayMinus("90-7D-A0-3D-67-24-49-16-69-15-E4-56-3E-08-9D-6D");
             if (!compareArrays(t05Ciphertext, t05CiphertextExp, "t05Ciphertext"));
 
-            // P[1]: 90-7D-A0-3D-67-24-49-16-69-15-E4-56-3E-08-9D-6D
-            // AES block key is t05Ciphertext
+            // P[1]: 90-7D-A0-3D-67-24-49-16-69-15-E4-56-3E-08-9D-6D = t05Ciphertext
+            // AES block key is t04Ciphertext
             // Input plaintext is data0x55
-            byte[] t06Ciphertext = AES.encrypt(iv, t05Ciphertext, data0x55);
+            byte[] t06Ciphertext = AES.encrypt(iv, t04Ciphertext, data0x55);
             byte[] t06CiphertextExp = hexStringToByteArrayMinus("F9-A0-89-7A-D9-D3-76-BA-F7-88-6C-62-C8-E8-97-15");
             if (!compareArrays(t06Ciphertext, t06CiphertextExp, "t06Ciphertext"));
 
@@ -1852,6 +1852,53 @@ PERMISSION_DENIED
             byte[] t07Ciphertext = AES.encrypt(iv, t06Ciphertext, data0xaa);
             byte[] t07CiphertextExp = hexStringToByteArrayMinus("92-FA-A8-B8-78-CC-D5-0C-63-13-DB-59-09-9D-CC-E8");
             if (!compareArrays(t07Ciphertext, t07CiphertextExp, "t07Ciphertext"));
+
+            // P[2]: 92-FA-A8-B8-78-CC-D5-0C-63-13-DB-59-09-9D-CC-E8 = t07Ciphertext
+            // AES block key is t06Ciphertext
+            // Input plaintext is data0x55
+            byte[] t08Ciphertext = AES.encrypt(iv, t06Ciphertext, data0x55);
+            byte[] t08CiphertextExp = hexStringToByteArrayMinus("84-B8-14-14-BE-98-AD-7F-12-EE-F0-DD-1B-17-DF-FF");
+            if (!compareArrays(t08Ciphertext, t08CiphertextExp, "t08Ciphertext"));
+
+            // Key for next secret plaintext generation: 84-B8-14-14-BE-98-AD-7F-12-EE-F0-DD-1B-17-DF-FF
+            // AES block key is t08Ciphertext
+            // AES block plaintext is data0xaa
+            byte[] t09Ciphertext = AES.encrypt(iv, t08Ciphertext, data0xaa);
+            byte[] t09CiphertextExp = hexStringToByteArrayMinus("37-2F-A1-3D-D4-3E-FD-41-98-59-DC-BC-FC-EF-FB-F8");
+            if (!compareArrays(t09Ciphertext, t09CiphertextExp, "t09Ciphertext"));
+
+            // P3 = = t09Ciphertext
+            byte[] t10Ciphertext = AES.encrypt(iv, t08Ciphertext, data0x55);
+            byte[] t10CiphertextExp = hexStringToByteArrayMinus("02-0C-87-DA-40-8C-3C-8D-E2-C1-58-86-2B-09-B6-3D");
+            if (!compareArrays(t10Ciphertext, t10CiphertextExp, "t10Ciphertext"));
+
+            byte[] t11Ciphertext = AES.encrypt(iv, t10Ciphertext, data0xaa);
+            byte[] t11CiphertextExp = hexStringToByteArrayMinus("5F-E2-E4-68-95-8B-6B-05-C8-A0-34-F3-38-23-CF-1B");
+            if (!compareArrays(t11Ciphertext, t11CiphertextExp, "t11Ciphertext"));
+
+            // P4 = = t11Ciphertext
+            byte[] t12Ciphertext = AES.encrypt(iv, t10Ciphertext, data0x55);
+            byte[] t12CiphertextExp = hexStringToByteArrayMinus("95-38-28-9A-9A-AC-5B-2D-B4-BB-76-F8-0F-B8-E8-5B");
+            if (!compareArrays(t12Ciphertext, t12CiphertextExp, "t12Ciphertext"));
+
+            byte[] t13Ciphertext = AES.encrypt(iv, t12Ciphertext, data0xaa);
+            byte[] t13CiphertextExp = hexStringToByteArrayMinus("AB-75-E2-FA-6D-CC-BA-A0-4E-85-D0-7F-B9-4E-ED-28");
+            if (!compareArrays(t13Ciphertext, t13CiphertextExp, "t13Ciphertext"));
+
+            // P5 = = t13Ciphertext
+            byte[] t14Ciphertext = AES.encrypt(iv, t12Ciphertext, data0x55);
+            byte[] t14CiphertextExp = hexStringToByteArrayMinus("A9-ED-2B-3A-93-C5-07-D1-3C-28-C5-58-2F-C3-5E-12");
+            if (!compareArrays(t14Ciphertext, t14CiphertextExp, "t14Ciphertext"));
+
+            byte[] t15Ciphertext = AES.encrypt(iv, t14Ciphertext, data0xaa);
+            byte[] t15CiphertextExp = hexStringToByteArrayMinus("AC-05-BC-DA-C4-4B-14-BF-FD-F8-90-74-98-69-53-89");
+            if (!compareArrays(t15Ciphertext, t15CiphertextExp, "t15Ciphertext"));
+
+
+
+
+
+
 
 
         }
@@ -1864,7 +1911,7 @@ PERMISSION_DENIED
 
 
         // hard coded exit
-        if (authenticationKey != null) return false;
+        if (authenticationKey != null) return true;
 
         byte[] sv1_expected = Utils.hexStringToByteArray("A55A00010080B98FDD01B6693705CEA6104948EFA3085C1B4FD150E33992B048");
         byte[] sv2_expected = Utils.hexStringToByteArray("5AA500010080B98FDD01B6693705CEA6104948EFA3085C1B4FD150E33992B048");
@@ -1926,6 +1973,7 @@ SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ Rn
             return false;
         } else {
             if (!Arrays.equals(arr, arrExpected)) {
+                log(methodName, printData(arrName + "   ", arr));
                 log(methodName, printData(arrName + "Exp", arrExpected));
                 Log.e(TAG, arrName + " does not match the expected value, aborted");
                 return false;
