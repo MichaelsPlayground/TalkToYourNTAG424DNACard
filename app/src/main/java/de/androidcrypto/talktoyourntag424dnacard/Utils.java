@@ -121,6 +121,16 @@ public class Utils {
         }
     }
 
+    /**
+     * will delete any '-' and " " characters between the hex chars before converting to a byte array
+     * @param s
+     * @return
+     */
+    public static byte[] hexStringToByteArrayMinus(String s) {
+        String newS = s.replaceAll("-", "").replaceAll(" ", "");
+        return hexStringToByteArray(newS);
+
+    }
     public static String getDec(byte[] bytes) {
         long result = 0;
         long factor = 1;

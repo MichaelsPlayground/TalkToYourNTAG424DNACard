@@ -1,6 +1,7 @@
 package de.androidcrypto.talktoyourntag424dnacard;
 
 import static de.androidcrypto.talktoyourntag424dnacard.Utils.hexStringToByteArray;
+import static de.androidcrypto.talktoyourntag424dnacard.Utils.hexStringToByteArrayMinus;
 import static de.androidcrypto.talktoyourntag424dnacard.Utils.intFrom3ByteArrayInversed;
 import static de.androidcrypto.talktoyourntag424dnacard.Utils.intTo2ByteArrayInversed;
 import static de.androidcrypto.talktoyourntag424dnacard.Utils.intTo3ByteArrayInversed;
@@ -1769,6 +1770,98 @@ PERMISSION_DENIED
         // Generation of Secret Plaintexts for this Authentication (AuthSPT)
         // step 14: AuthSPT = generatePlaintexts(4, Kx)
 
+        byte[] iv = new byte[16];
+        // step 15: Round 1: Pre-Step: Length-doubling PRG - Updated key for 0x55
+        // AES-Encrypt: EKx(0x55555555555555555555555555555555) = 9ADAE054F63DFAFF5EA18E45EDF6EA6F
+        byte[] data0x55 = hexStringToByteArray("55555555555555555555555555555555");
+        byte[] updatedKey0x55 = AES.encrypt(iv, authenticationKey, data0x55);
+        if (TEST_MODE_GEN_LRP_SES_KEYS) {
+            byte[] updatedKey0x55Exp = hexStringToByteArray("9ADAE054F63DFAFF5EA18E45EDF6EA6F");
+            if (!Arrays.equals(updatedKey0x55, updatedKey0x55Exp)) {
+                log(methodName, printData("updatedKey0x55Exp", updatedKey0x55Exp));
+                Log.e(TAG, "updatedKey0x55 does not match the expected value, aborted");
+                return false;
+            } else {
+                Log.d(TAG, "updatedKey0x55 test PASSED");
+            }
+        }
+
+        // step 16: Round 1: Pre-Step: Length-doubling PRG - Encryption of 0xAA
+        // AES-Encrypt: EKx(0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA) = 8522717D3AD1FBFEAFA1CEAAFDF56565
+        byte[] data0xaa = hexStringToByteArray("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+        byte[] updatedKey0xaa = AES.encrypt(iv, authenticationKey, data0xaa);
+        if (TEST_MODE_GEN_LRP_SES_KEYS) {
+            byte[] updatedKey0xaaExp = hexStringToByteArrayMinus("8522717D3AD1FBFEAFA1CEAAFDF56565");
+            if (!Arrays.equals(updatedKey0xaa, updatedKey0xaaExp)) {
+                log(methodName, printData("updatedKey0xaaExp", updatedKey0xaaExp));
+                Log.e(TAG, "updatedKey0xaa does not match the expected value, aborted");
+                return false;
+            } else {
+                Log.d(TAG, "updatedKey0xaa test PASSED");
+            }
+        }
+
+        if (TEST_MODE_GEN_LRP_SES_KEYS) {
+            // see Leakage Resilient Primitive (LRP) Specification AN12304.pdf pages 10 ff
+            // 3.1 LRP Eval in detail - 1. Test Vectors
+
+            // Generating Secret Plaintexts and Updated Keys
+            byte[] tBaseKey = hexStringToByteArrayMinus("567826B8DA8E768432A9548DBE4AA3A0");
+            // plaintext is data0x55
+            byte[] t01Ciphertext = AES.encrypt(iv, tBaseKey, data0x55);
+            byte[] t01CiphertextExp = hexStringToByteArrayMinus("3A-92-AA-06-40-F2-6A-E9-2F-81-99-36-52-F0-05-18");
+            if (!compareArrays(t01Ciphertext, t01CiphertextExp, "t01Ciphertext"));
+            // plaintext is data0xaa
+            byte[] t02Ciphertext = AES.encrypt(iv, tBaseKey, data0xaa);
+            byte[] t02CiphertextExp = hexStringToByteArrayMinus("22-DA-7A-8A-2F-4A-72-1D-43-EC-1C-97-02-FE-77-BE");
+            if (!compareArrays(t02Ciphertext, t02CiphertextExp, "t02Ciphertext"));
+
+            // Generating Secret Plaintexts
+            // Plaintext base key = AES block key is t01Ciphertext
+            // AES block plaintext is data0xaa
+            // AES block ciphertext: AC-20-D3-9F-53-41-FE-98-DF-CA-21-DA-86-BA-79-14
+            byte[] t03Ciphertext = AES.encrypt(iv, t01Ciphertext, data0xaa);
+            byte[] t03CiphertextExp = hexStringToByteArrayMinus("AC-20-D3-9F-53-41-FE-98-DF-CA-21-DA-86-BA-79-14");
+            if (!compareArrays(t03Ciphertext, t03CiphertextExp, "t03Ciphertext"));
+
+            // P[0]: AC-20-D3-9F-53-41-FE-98-DF-CA-21-DA-86-BA-79-14 =
+            byte[] tPlaintext0 = t03Ciphertext.clone();
+            // AES block key is t01Ciphertext
+            // Input plaintext is data0x55
+            byte[] t04Ciphertext = AES.encrypt(iv, t01Ciphertext, data0x55);
+            byte[] t04CiphertextExp = hexStringToByteArrayMinus("10-79-E9-6B-0E-24-61-C2-DE-AB-00-30-59-56-54-9A");
+            if (!compareArrays(t04Ciphertext, t04CiphertextExp, "t04Ciphertext"));
+
+            // Key for next secret plaintext generation: 10-79-E9-6B-0E-24-61-C2-DE-AB-00-30-59-56-54-9A
+            // AES block key is t04Ciphertext
+            // AES block plaintext is data0xaa
+            byte[] t05Ciphertext = AES.encrypt(iv, t04Ciphertext, data0xaa);
+            byte[] t05CiphertextExp = hexStringToByteArrayMinus("90-7D-A0-3D-67-24-49-16-69-15-E4-56-3E-08-9D-6D");
+            if (!compareArrays(t05Ciphertext, t05CiphertextExp, "t05Ciphertext"));
+
+            // P[1]: 90-7D-A0-3D-67-24-49-16-69-15-E4-56-3E-08-9D-6D
+            // AES block key is t05Ciphertext
+            // Input plaintext is data0x55
+            byte[] t06Ciphertext = AES.encrypt(iv, t05Ciphertext, data0x55);
+            byte[] t06CiphertextExp = hexStringToByteArrayMinus("F9-A0-89-7A-D9-D3-76-BA-F7-88-6C-62-C8-E8-97-15");
+            if (!compareArrays(t06Ciphertext, t06CiphertextExp, "t06Ciphertext"));
+
+            // Key for next secret plaintext generation: F9-A0-89-7A-D9-D3-76-BA-F7-88-6C-62-C8-E8-97-15
+            // AES block key is t06Ciphertext
+            // AES block plaintext is data0xaa
+            byte[] t07Ciphertext = AES.encrypt(iv, t06Ciphertext, data0xaa);
+            byte[] t07CiphertextExp = hexStringToByteArrayMinus("92-FA-A8-B8-78-CC-D5-0C-63-13-DB-59-09-9D-CC-E8");
+            if (!compareArrays(t07Ciphertext, t07CiphertextExp, "t07Ciphertext"));
+
+
+        }
+
+
+        // step 17: AuthSPT [0] = B5CBF983BBE3C458189436288813EC30
+
+
+
+
 
         // hard coded exit
         if (authenticationKey != null) return false;
@@ -1815,7 +1908,7 @@ SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ Rn
         if (TEST_MODE) {
             boolean testResult = compareTestModeValues(cmacInput, sv1_expected, "SV1");
         }
-        byte[] iv = new byte[16];
+
         log(methodName, printData("iv       ", iv));
         byte[] cmac = calculateDiverseKey(authenticationKey, cmacInput);
         log(methodName, printData("cmacOut ", cmac));
@@ -1823,6 +1916,24 @@ SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ Rn
             boolean testResult = compareTestModeValues(cmac, SesAuthENCKey_expected, "SesAUthENCKey");
         }
         return false;
+    }
+
+    private boolean compareArrays (byte[] arr, byte[] arrExpected, String arrName) {
+        String methodName = "compareArrays";
+        if ((arr == null) || (arrExpected == null) || (arr.length < 1) || (arrExpected.length < 1)) {
+            log(methodName, "arr or arrExpected are NULL or of length 0, aborted");
+            Log.e(TAG, arrName + " arr or arrExpected are NULL or of length 0, aborted");
+            return false;
+        } else {
+            if (!Arrays.equals(arr, arrExpected)) {
+                log(methodName, printData(arrName + "Exp", arrExpected));
+                Log.e(TAG, arrName + " does not match the expected value, aborted");
+                return false;
+            } else {
+                Log.d(TAG, arrName + " test PASSED");
+                return true;
+            }
+        }
     }
 
 
