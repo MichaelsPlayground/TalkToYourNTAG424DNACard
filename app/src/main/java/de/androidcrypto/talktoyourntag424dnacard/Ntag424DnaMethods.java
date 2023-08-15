@@ -177,6 +177,12 @@ public class Ntag424DnaMethods {
     private static final byte[] HEADER_ENC = new byte[]{(byte) (0x5A), (byte) (0xA5)}; // fixed to 0x5AA5
     private static final byte[] HEADER_MAC = new byte[]{(byte) (0xA5), (byte) (0x5A)}; // fixed to 0x5AA5
 
+    // constants for LRP mode
+    private static final byte[] LRP_FIXED_COUNTER = new byte[]{(byte) (0x00), (byte) (0x01)}; // fixed to 0x0001
+    private static final byte[] LRP_FIXED_LENGTH = new byte[]{(byte) (0x00), (byte) (0x80)}; // fixed to 0x0080
+    private static final byte[] LRP_FIXED_LABEL = new byte[]{(byte) (0x96), (byte) (0x69)}; // fixed to 0x9669
+
+
     private static final byte[] PADDING_FULL = hexStringToByteArray("80000000000000000000000000000000");
 
     public enum CommunicationSettings {
@@ -1398,6 +1404,7 @@ PERMISSION_DENIED
 
         // see example in Mifare DESFire Light Features and Hints AN12343.pdf pages 33 ff
         // and MIFARE DESFire Light contactless application IC MF2DLHX0.pdf pages 52 ff
+        boolean testMode = true;
         logData = "";
         invalidateAllData();
         final String methodName = "authenticateLrpEv2First";
@@ -1424,6 +1431,15 @@ PERMISSION_DENIED
             System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
             return false;
         }
+
+        if (testMode) {
+            Log.d(TAG, "** authenticateLrpEv2First test mode ENABLED **");
+            log(methodName, "** authenticateLrpEv2First test mode ENABLED **");
+            //keyNo = (byte) 0x03; // is this correct ?
+            keyNo = (byte) 0x00;
+            key = hexStringToByteArray("00000000000000000000000000000000");
+        }
+
         log(methodName, "step 01 get encrypted rndB from card", false);
         log(methodName, "This method is using the AUTHENTICATE_AES_EV2_FIRST_COMMAND so it will work with AES-based applications only", false);
         // authenticate 1st part
@@ -1446,7 +1462,17 @@ PERMISSION_DENIED
             log(methodName, printData("commandParameter", commandParameter));
             apdu = wrapMessage(AUTHENTICATE_EV2_FIRST_COMMAND, commandParameter);
             log(methodName, "get enc rndB " + printData("apdu", apdu));
-            response = sendData(apdu);
+            if (testMode) {
+                byte[] apduExp = hexStringToByteArray("9071000008000602000000000000");
+                if (!Arrays.equals(apdu, apduExp)) {
+                    log(methodName, printData("apduExp", apduExp));
+                    Log.e(TAG, "apdu does not match the expected value, aborted");
+                    return false;
+                }
+                response = hexStringToByteArray("0156109A31977C855319CD4618C9D2AED291AF");
+            } else {
+                response = sendData(apdu);
+            }
             log(methodName, "get enc rndB " + printData("response", response));
             // response: 013622ab415702ff1684c94fb2f9f517dc91af
             // response 01 = tag is in LRP mode || rndB (16 bytes) || status code (2 bytes)
@@ -1469,6 +1495,66 @@ PERMISSION_DENIED
         // response is NOT: AuthMode || PICC challenge RndB || status code AF = more data
         // auth mode 01 means LRP mode, 00 is fall back to AES
 
+        // response when PICC is in LRP mode:
+        // 01 fb23fd204377069411f9dcea628d796 991af (19 bytes)
+        // AuthMode (1 byte) || PICC challenge RndB (16 bytes) || status code AF = more data (2 bytes)
+        byte[] rndB = Arrays.copyOfRange(getData(response), 1, response.length - 2);
+        log(methodName, printData("rndB", rndB));
+
+        // step 14: generate RndA
+        byte[] rndA = new byte[16]; // this is an AES key
+        rndA = getRandomData(rndA);
+        if (testMode) {
+            rndA = hexStringToByteArray("74D7DF6A2CEC0B72B412DE0D2B1117E6");
+        }
+        log(methodName, printData("rndA", rndA));
+
+        // step 15: concatenate RndA || RndB = "dynamic data"
+        // is done in next step
+
+        // step 16 session vector (used for session key calculation)
+        // is done in generateLrpSessionKeys()
+
+        /*
+        // fixed counter || fixed length || dynamic context || fixed label
+        // 0001 || 0080 || dynamic data || 9669
+        final byte[] FIXED_COUNTER = new byte[]{(byte) (0x00), (byte) (0x01)}; // fixed to 0x0001
+        final byte[] FIXED_LENGTH = new byte[]{(byte) (0x00), (byte) (0x80)}; // fixed to 0x0080
+        final byte[] FIXED_LABEL = new byte[]{(byte) (0x96), (byte) (0x69)}; // fixed to 0x9669
+        // build the session vector
+        ByteArrayOutputStream baosSessionVector = new ByteArrayOutputStream();
+        baosSessionVector.write(FIXED_COUNTER, 0, FIXED_COUNTER.length);
+        baosSessionVector.write(FIXED_LENGTH, 0, FIXED_LENGTH.length);
+        baosSessionVector.write(rndA, 0, rndA.length);
+        baosSessionVector.write(rndB, 0, rndB.length);
+        baosSessionVector.write(FIXED_LABEL, 0, FIXED_LABEL.length);
+        byte[] sessionVector = baosSessionVector.toByteArray();
+        log(methodName, printData("sessionVector", sessionVector));
+        if (testMode) {
+            // 0001008074D7897AB6DD9C0E855319CD4618C9D2AED2B412DE0D2B1117E69669
+            byte[] sessionVectorExp = hexStringToByteArray("0001008074D7897AB6DD9C0E855319CD4618C9D2AED2B412DE0D2B1117E69669");
+            if (!Arrays.equals(sessionVector, sessionVectorExp)) {
+                log(methodName, printData("sessionVectorExp", sessionVectorExp));
+                Log.e(TAG, "sessionVector does not match the expected value, aborted");
+                return false;
+            }
+            sessionVector = sessionVectorExp.clone();
+        }
+         */
+
+        boolean sessionKeySuccess = generateLrpSessionKeys(rndA, rndB, key);
+
+
+        // AuthenticateLRPFirst Part 2
+        // step 19 (should be done BEFORE step 18 as in setp 18 the data is needed ??
+        // step 19: PCDResponse = MAC_LRP (KSesAuthMACKey; RNDA || RNDB)
+        // 89B59DCEDC31A3D3F38EF8D4810B3B4
+
+        // step 18: Data = RndA || PCDResponse
+        // 74D7DF6A2CEC0B72B412DE0D2B1117E689B59DCEDC31A3D3F38EF8D4810B3B4
+
+
+/*
         // now we know that we can work with the response, 16 bytes long
         // R-APDU (Part 1) (E(Kx, RndB)) || SW1 || SW2
         //byte[] rndB_enc =  getData(response);
@@ -1546,6 +1632,7 @@ PERMISSION_DENIED
         log(methodName, "step 12 decrypt data_enc with iv2 and key");
         byte[] data = AES.decrypt(iv2, key, data_enc);
         log(methodName, printData("data", data));
+*/
         // data is 32 bytes long, e.g. a1487b61f69cef65a09742b481152325a7cb8fc6000000000000000000000000
         /**
          * structure of data
@@ -1556,7 +1643,7 @@ PERMISSION_DENIED
          * PDcap2                     06 bytes 000000000000
          * PCDcap2                    06 bytes 000000000000
          */
-
+/*
         // split data
         byte[] ti = new byte[4]; // LSB notation
         byte[] rndA_leftRotated = new byte[16];
@@ -1600,8 +1687,143 @@ PERMISSION_DENIED
         }
         log(methodName, "*********************");
         return rndAEqual;
+
+ */
+        return false;
     }
 
+    /**
+     * calculate the LRP Session Keys (KeySets) during authenticateLrpEv2First
+     * It uses the AesMac class for CMAC
+     * The code is tested with example values in Mifare DESFire Light Features and Hints AN12343.pdf
+     * on pages 46..50
+     *
+     * @param rndA              is the random generated 16 bytes long key A from reader
+     * @param rndB              is the random generated 16 bytes long key B from PICC
+     * @param authenticationKey is the 16 bytes long AES key used for authentication
+     * @return the 16 bytes long (AES) encryption key
+     */
+
+    public boolean generateLrpSessionKeys(byte[] rndA, byte[] rndB, byte[] authenticationKey) {
+
+        // see MIFARE DESFire Light contactless application IC pdf, pages 46 - 50
+        final String methodName = "generateLrpSessionKeys";
+        log(methodName, printData("rndA", rndA) + printData(" rndB", rndB) + printData(" authenticationKey", authenticationKey), true);
+        // sanity checks
+        if ((rndA == null) || (rndA.length != 16)) {
+            log(methodName, "rndA is NULL or wrong length, aborted");
+            return false;
+        }
+        if ((rndB == null) || (rndB.length != 16)) {
+            log(methodName, "rndB is NULL or wrong length, aborted");
+            return false;
+        }
+        if ((authenticationKey == null) || (authenticationKey.length != 16)) {
+            log(methodName, "authenticationKey is NULL or wrong length, aborted");
+            return false;
+        }
+        boolean TEST_MODE_GEN_LRP_SES_KEYS = true;
+
+        if (TEST_MODE_GEN_LRP_SES_KEYS) {
+            writeToUiAppend(textView, "### TEST_MODE enabled ###");
+            writeToUiAppend(textView, "using pre defined values");
+            rndA = Utils.hexStringToByteArray("74D7DF6A2CEC0B72B412DE0D2B1117E6");
+            rndB = Utils.hexStringToByteArray("56109A31977C855319CD4618C9D2AED2");
+            authenticationKey = Utils.hexStringToByteArray("00000000000000000000000000000000");
+        }
+        log(methodName, printData("rndA     ", rndA));
+        // 74 D7 DF 6A 2C EC 0B 72 B4 12 DE 0D 2B 11 17 E6
+        //  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
+        byte[] rndA00to01 = Arrays.copyOfRange(rndA, 0, 2); // step 06 74d7
+        byte[] rndA02to07 = Arrays.copyOfRange(rndA, 2, 8); // step 07 DF6A2CEC0B72
+        byte[] rndA08to15 = Arrays.copyOfRange(rndA, 8, 16); // step 11 (wrong: 2B412DE0D2B1117E), correct B412DE0D2B1117E6
+        // 56 10 9A 31 97 7C 85 53 19 CD 46 18 C9 D2 AE D2
+        //  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
+        byte[] rndB00to05 = Arrays.copyOfRange(rndB, 0, 6); // step 08 56109A31977C
+        byte[] rndB06to15 = Arrays.copyOfRange(rndB, 6, 16); // step 10 855319CD4618C9D2AED2
+        byte[] xored = xor(rndA02to07, rndB00to05); // step 09
+        // step 12 sessionVector
+        // counter || length tag || RndA[15::14] || (RndA[13::8] XOR RndB[15::10]) || RndB[9::0] || RndA[7::0] || label
+        // counter || length tag || rndA00to01   || xored                          || rndB06to15 || rndA08to15 || label
+        // 0001008074D7897AB6DD9C0E855319CD4618C9D2AED2B412DE0D2B1117E69669
+        ByteArrayOutputStream baosSessionVector = new ByteArrayOutputStream();
+        baosSessionVector.write(LRP_FIXED_COUNTER, 0, LRP_FIXED_COUNTER.length);
+        baosSessionVector.write(LRP_FIXED_LENGTH, 0, LRP_FIXED_LENGTH.length);
+        baosSessionVector.write(rndA00to01, 0, rndA00to01.length);
+        baosSessionVector.write(xored, 0, xored.length);
+        baosSessionVector.write(rndB06to15, 0, rndB06to15.length);
+        baosSessionVector.write(rndA08to15, 0, rndA08to15.length);
+        baosSessionVector.write(LRP_FIXED_LABEL, 0, LRP_FIXED_LABEL.length);
+        byte[] sessionVector = baosSessionVector.toByteArray();
+        if (TEST_MODE_GEN_LRP_SES_KEYS) {
+            byte[] sessionVectorExp = hexStringToByteArray("0001008074D7897AB6DD9C0E855319CD4618C9D2AED2B412DE0D2B1117E69669");
+            if (!Arrays.equals(sessionVector, sessionVectorExp)) {
+                log(methodName, printData("sessionVectorExp", sessionVectorExp));
+                Log.e(TAG, "sessionVector does not match the expected value, aborted");
+                return false;
+            } else {
+                Log.d(TAG, "sessionVector test PASSED");
+            }
+        }
+
+        // Generation of Secret Plaintexts for this Authentication (AuthSPT)
+        // step 14: AuthSPT = generatePlaintexts(4, Kx)
+
+
+        // hard coded exit
+        if (authenticationKey != null) return false;
+
+        byte[] sv1_expected = Utils.hexStringToByteArray("A55A00010080B98FDD01B6693705CEA6104948EFA3085C1B4FD150E33992B048");
+        byte[] sv2_expected = Utils.hexStringToByteArray("5AA500010080B98FDD01B6693705CEA6104948EFA3085C1B4FD150E33992B048");
+        // named: Encryption Session Key
+        byte[] SesAuthENCKey_expected = Utils.hexStringToByteArray("7A93D6571E4B180FCA6AC90C9A7488D4");
+        // named CMAC Session Key
+        byte[] SesAuthMACKey_expected = Utils.hexStringToByteArray("FC4AF159B62E549B5812394CAB1918CC");
+
+/*
+SV 1 = [0xA5][0x5A][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ RndB[15:10]) ] || [RndB[9:0] || RndA[7:0]
+SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ RndB[15:10]) ] || [RndB[9:0] || RndA[7:0]
+ */
+
+
+        // see Mifare DESFire Light Features and Hints AN12343.pdf page 35
+        byte[] cmacInput = new byte[32];
+        byte[] counter = new byte[]{(byte) (0x00), (byte) (0x01)}; // fixed to 0x0001
+        byte[] length = new byte[]{(byte) (0x00), (byte) (0x80)}; // fixed to 0x0080
+
+        System.arraycopy(HEADER_MAC, 0, cmacInput, 0, 2);
+        System.arraycopy(counter, 0, cmacInput, 2, 2);
+        System.arraycopy(length, 0, cmacInput, 4, 2);
+        System.arraycopy(rndA, 0, cmacInput, 6, 2);
+
+
+        rndA02to07 = Arrays.copyOfRange(rndA, 2, 8);
+        log(methodName, printData("rndA     ", rndA));
+        log(methodName, printData("rndA02to07", rndA02to07));
+        rndB00to05 = Arrays.copyOfRange(rndB, 0, 6);
+        log(methodName, printData("rndB     ", rndB));
+        log(methodName, printData("rndB00to05", rndB00to05));
+
+        log(methodName, printData("xored     ", xored));
+        System.arraycopy(xored, 0, cmacInput, 8, 6);
+        System.arraycopy(rndB, 6, cmacInput, 14, 10);
+        System.arraycopy(rndA, 8, cmacInput, 24, 8);
+
+        log(methodName, printData("rndA     ", rndA));
+        log(methodName, printData("rndB     ", rndB));
+        log(methodName, printData("cmacInput", cmacInput));
+        if (TEST_MODE) {
+            boolean testResult = compareTestModeValues(cmacInput, sv1_expected, "SV1");
+        }
+        byte[] iv = new byte[16];
+        log(methodName, printData("iv       ", iv));
+        byte[] cmac = calculateDiverseKey(authenticationKey, cmacInput);
+        log(methodName, printData("cmacOut ", cmac));
+        if (TEST_MODE) {
+            boolean testResult = compareTestModeValues(cmac, SesAuthENCKey_expected, "SesAUthENCKey");
+        }
+        return false;
+    }
 
 
     /**
@@ -2181,7 +2403,7 @@ Cmd.SetConfiguration C-APDU
         if (testMode) {
             byte[] encryptedDataExp = hexStringToByteArray("41B2BA963075730426D0858D2AA6C498");
             if (!Arrays.equals(encryptedData, encryptedDataExp)) {
-                log(methodName, printData("encryptedDExp", encryptedDataExp));
+                log(methodName, printData("encryptedDataExp", encryptedDataExp));
                 Log.e(TAG, "encryptedData does not match the expected value, aborted");
                 return false;
             }
