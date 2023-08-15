@@ -123,12 +123,15 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     private Button authKey0D, authKey1D, authKey2D, authKey3D, authKey4D; // default keys
     private Button authKey0C, authKey1C, authKey2C, authKey3C, authKey4C; // changed keys
 
+    private Button testEnableLrpMode;
     private byte KEY_NUMBER_USED_FOR_AUTHENTICATION; // the key number used for a successful authentication
     // var used by EV2 auth
     private byte[] SES_AUTH_ENC_KEY; // filled in by authenticateEv2
     private byte[] SES_AUTH_MAC_KEY; // filled in by authenticateEv2
     private byte[] TRANSACTION_IDENTIFIER; // filled in by authenticateEv2
     private int CMD_COUNTER; // filled in by authenticateEv2, LSB encoded when in byte[
+
+
 
     /**
      * section for key handling
@@ -328,6 +331,8 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         authD3ACEv2 = findViewById(R.id.btnAuthD3ACEv2);
         getCardUidEv2 = findViewById(R.id.btnGetCardUidEv2);
         getFileSettingsEv2 = findViewById(R.id.btnGetFileSettingsEv2);
+
+        testEnableLrpMode = findViewById(R.id.btnTestLrpEnable);
 
         // methods for sdm
         createNdefFile256Ev2 = findViewById(R.id.btnCreateNdef256);
@@ -887,6 +892,33 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 } else {
                     writeToUiAppend(output, logString + " FAILURE");
                     writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
+                }
+            }
+        });
+
+        testEnableLrpMode.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "testEnableLrpMode";
+                writeToUiAppend(output, logString);
+
+                boolean success = ntag424DnaMethods.changeAuthenticationModeFromAesToLrp();
+                String logData = ntag424DnaMethods.getLogData();
+                byte[] errorCodeByte = ntag424DnaMethods.getErrorCode();
+                String errorCodeReason = ntag424DnaMethods.getErrorCodeReason();
+                writeToUiAppend(output, printData("errorCode", errorCodeByte));
+                writeToUiAppend(output, "errorCodeReason: " + errorCodeReason);
+                writeToUiAppend(output, "logData:\n" + logData);
+
+                if (success) {
+                    writeToUiAppend(output, logString + " SUCCESS");
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
+                    selectedApplicationId = ntag424DnaMethods.getNTAG_424_DNA_DF_APPLICATION_NAME().clone();
+                    vibrateShort();
+                } else {
+                    writeToUiAppend(output, logString + " FAILURE");
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE", COLOR_RED);
                 }
             }
         });

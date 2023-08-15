@@ -823,12 +823,12 @@
                         android:text="man decr" />
 
                     <Button
-                        android:id="@+id/btnx2"
+                        android:id="@+id/btnTestLrpEnable"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
                         android:layout_weight="1"
-                        android:text="x" />
+                        android:text="man LRP +" />
 
                 </LinearLayout>
 

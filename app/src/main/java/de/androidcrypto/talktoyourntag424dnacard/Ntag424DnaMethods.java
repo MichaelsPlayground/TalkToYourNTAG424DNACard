@@ -2,6 +2,7 @@ package de.androidcrypto.talktoyourntag424dnacard;
 
 import static de.androidcrypto.talktoyourntag424dnacard.Utils.hexStringToByteArray;
 import static de.androidcrypto.talktoyourntag424dnacard.Utils.intFrom3ByteArrayInversed;
+import static de.androidcrypto.talktoyourntag424dnacard.Utils.intTo2ByteArrayInversed;
 import static de.androidcrypto.talktoyourntag424dnacard.Utils.intTo3ByteArrayInversed;
 import static de.androidcrypto.talktoyourntag424dnacard.Utils.printData;
 
@@ -146,6 +147,7 @@ public class Ntag424DnaMethods {
     private static final byte WRITE_STANDARD_FILE_SECURE_COMMAND = (byte) 0x8D;
     private static final byte AUTHENTICATE_EV2_FIRST_COMMAND = (byte) 0x71;
     private static final byte AUTHENTICATE_EV2_NON_FIRST_COMMAND = (byte) 0x77;
+    private static final byte SET_CONFIGURATION_COMMAND = (byte) 0x5C;
 
     /**
      * NTAG 424 DNA specific constants
@@ -488,7 +490,7 @@ fileSize: 128
 
         // IV_Input (IV_Label || TI || CmdCounter || Padding)
         // Generating the MAC for the Command APDU
-        byte[] commandCounterLsb = Utils.intTo2ByteArrayInversed(CmdCounter);
+        byte[] commandCounterLsb = intTo2ByteArrayInversed(CmdCounter);
         log(methodName, "CmdCounter: " + CmdCounter);
         log(methodName, printData("commandCounterLsb", commandCounterLsb));
         byte[] padding1 = hexStringToByteArray("0000000000000000"); // 8 bytes
@@ -759,7 +761,7 @@ fileSize: 128
 
         // IV_Input (IV_Label || TI || CmdCounter || Padding)
         // Generating the MAC for the Command APDU
-        byte[] commandCounterLsb = Utils.intTo2ByteArrayInversed(CmdCounter);
+        byte[] commandCounterLsb = intTo2ByteArrayInversed(CmdCounter);
         log(methodName, "CmdCounter: " + CmdCounter);
         log(methodName, printData("commandCounterLsb", commandCounterLsb));
         byte[] padding1 = hexStringToByteArray("0000000000000000"); // 8 bytes
@@ -1052,7 +1054,7 @@ fileSize: 128
 
         // IV_Input (IV_Label || TI || CmdCounter || Padding)
         // Generating the MAC for the Command APDU
-        byte[] commandCounterLsb = Utils.intTo2ByteArrayInversed(CmdCounter);
+        byte[] commandCounterLsb = intTo2ByteArrayInversed(CmdCounter);
         log(methodName, "CmdCounter: " + CmdCounter);
         log(methodName, printData("commandCounterLsb", commandCounterLsb));
         byte[] padding1 = hexStringToByteArray("0000000000000000"); // 8 bytes
@@ -1275,7 +1277,7 @@ PERMISSION_DENIED
 
         // MAC_Input
         // Cmd || CmdCounter || TI || CmdHeader = fileNumber || n/a (CmdData)
-        byte[] commandCounterLsb1 = Utils.intTo2ByteArrayInversed(CmdCounter);
+        byte[] commandCounterLsb1 = intTo2ByteArrayInversed(CmdCounter);
         log(methodName, "CmdCounter: " + CmdCounter);
         log(methodName, printData("commandCounterLsb1", commandCounterLsb1));
         ByteArrayOutputStream baosMacInput = new ByteArrayOutputStream();
@@ -2037,9 +2039,11 @@ PERMISSION_DENIED
      * LRP secure messaging is required to be used for all future sessions.
      * Please use this method with care - there is no way back to AES secure messaging mode !
      * @return true on success
+     * Note: A previous authentication using the Master Application Key (on a Mifare DESFire EVx tag)
+     * or with the Application Master Key (on a NTAG 424 DNA) is necessary !
      */
 
-    public boolean changeAuthenticationModeToLrp() {
+    public boolean changeAuthenticationModeFromAesToLrp() {
 
         /**
          * see NTAG 424 DNA NT4H2421Gx.pdf 'SetConfiguration' command on pages 55 - 57
@@ -2047,9 +2051,225 @@ PERMISSION_DENIED
          * see MIFARE DESFire Light contactless application IC MF2DLHX0.pdf 'SetConfiguration' command on pages 61 - 66
          */
 
-        // at the moment this is just a stub with not action !
+        // status: WORKING
 
-        return false;
+        boolean testMode = true; // if true some data is replaced by test vectors and no communication is done to the tag
+
+        // at the moment this is just a stub with no action !
+
+        String logData = "";
+        final String methodName = "changeAuthenticationModeFromAesToLrp";
+        log(methodName, "started", true);
+        // sanity checks
+        if (!checkAuthenticateAesEv2()) return false; // logFile and errorCode are updated
+        if (!checkIsoDep()) return false; // logFile and errorCode are updated
+
+        if (testMode) {
+            Log.d(TAG, "** changeAuthenticationModeFromAesToLrp test mode ENABLED **");
+            log(methodName, "** changeAuthenticationModeFromAesToLrp test mode ENABLED **");
+            SesAuthENCKey = hexStringToByteArray("66A8CB93269DC9BC2885B7A91B9C697B");
+            SesAuthMACKey = hexStringToByteArray("7DE5F7E244A46D22E536804D07E8D70E");
+            TransactionIdentifier = hexStringToByteArray("ED56F6E6");
+            CmdCounter = 0;
+        }
+        errorCode = RESPONSE_FAILURE.clone(); // default
+        errorCodeReason = "TEST FAILURE";  // default
+/*
+3 Session MAC Key (SesAuthMACKey) =
+4 Encrypting the Command Data
+6 IV_Label =
+7 TI =
+8 Cmd Counter =
+9 E(KSesAuthEnc, Basis for the IV)) =
+10 IV =
+11 PDCap2.1 =
+12 Data for Cmd.SetConfiguration =
+05 7DE5F7E244A46D22E536804D07E8D70E
+A55A
+ED56F6E6
+0000 DA0F644A4986275957CF1EC3AF4CCE53 DA0F644A4986275957CF1EC3AF4CCE53 02
+2
+Session Encryption Key (SesAuthEncKey)
+=
+66A8CB93269DC9BC2885B7A91B9C697B
+5
+IV_Input
+(IV_Label || TI || Cmd Counter || Padding)
+=
+A55A ED56F6E600000000000000000000
+13 Padded Data
+16 IV for MACing AN12343
+Application note COMPANY PUBLIC
+            00000000020000000000
+= 00000000 02 0000000000 800000000000
+= 00000000000000000000000000000000
+
+17
+MAC_Input
+(Ins || Cmd Counter || TI || Cmd Header || Encrypted Data)
+=
+5C0000ED56F6E60541B2BA963075730426D0858D2AA6C498
+5C 0000 ED56F6E6 05 41B2BA963075730426D0858D2AA6C498
+18
+MAC = CMAC(KSesAuthMAC, MAC_ Input)
+=
+2F579E77FAB49F83
+19
+Constructing the full Command APDU
+20 CLA
+21 Ins
+22 P1
+23 P2
+24 Lc (Length of the data)
+26 Le (Length expected)
+28 Cmd Counter
+29 Cmd.SetConfiguration R-APDU
+= 90 = 5C = 00 = 00 = 19
+= 00
+25
+Data (Cmd Header || Encrypted Data || MAC)
+=
+0541B2BA963075730426D0858D2AA6C4982F579E77FAB49F8 3
+27
+Cmd.SetConfiguration C-APDU
+(Cmd || Ins || P1 || P2 || Lc || Data || Le)
+>
+905C000019050041B2BA963075730426D0858D2AA6C4982F579E77FAB49F8300
+= 0100
+< 9100 (00 = SUCCESS)
+ */
+        // Encrypting the Command Data
+        // IV_Input (IV_Label || TI || CmdCounter || Padding)
+        // MAC_Input
+        byte[] commandCounterLsb1 = intTo2ByteArrayInversed(CmdCounter);
+        log(methodName, "CmdCounter: " + CmdCounter);
+        log(methodName, printData("commandCounterLsb1", commandCounterLsb1));
+        byte[] padding1 = hexStringToByteArray("0000000000000000"); // 8 bytes
+        ByteArrayOutputStream baosIvInput = new ByteArrayOutputStream();
+        baosIvInput.write(HEADER_MAC, 0, HEADER_MAC.length);
+        baosIvInput.write(TransactionIdentifier, 0, TransactionIdentifier.length);
+        baosIvInput.write(commandCounterLsb1, 0, commandCounterLsb1.length);
+        baosIvInput.write(padding1, 0, padding1.length);
+        byte[] ivInput = baosIvInput.toByteArray();
+        log(methodName, printData("ivInput", ivInput));
+
+        // IV for CmdData = Enc(KSesAuthENC, IV_Input)
+        log(methodName, printData("SesAuthENCKey", SesAuthENCKey));
+        byte[] startingIv = new byte[16];
+        byte[] ivForCmdData = AES.encrypt(startingIv, SesAuthENCKey, ivInput);
+        log(methodName, printData("ivForCmdData", ivForCmdData));
+        if (testMode) {
+            byte[] ivForCmdDataExp = hexStringToByteArray("DA0F644A4986275957CF1EC3AF4CCE53");
+            if (!Arrays.equals(ivForCmdData, ivForCmdDataExp)) {
+                Log.e(TAG, "ivForCmdData does not match the expected value, aborted");
+                return false;
+            }
+        }
+
+        // command data - usually it is by by several parameter, but here we are just take the
+        // original command sequence from the "Feature and Hint" document:
+        byte[] commandDataPadded = hexStringToByteArray("00000000020000000000800000000000");
+        log(methodName, printData("commandDataPadded", commandDataPadded));
+        byte[] encryptedData = AES.encrypt(ivForCmdData, SesAuthENCKey, commandDataPadded);
+        log(methodName, printData("encryptedData", encryptedData));
+        if (testMode) {
+            byte[] encryptedDataExp = hexStringToByteArray("41B2BA963075730426D0858D2AA6C498");
+            if (!Arrays.equals(encryptedData, encryptedDataExp)) {
+                log(methodName, printData("encryptedDExp", encryptedDataExp));
+                Log.e(TAG, "encryptedData does not match the expected value, aborted");
+                return false;
+            }
+        }
+
+        // MAC_Input (Ins || CmdCounter || TI || CmdHeader = 0x05 || Encrypted CmdData )
+        byte CMD_HEADER = (byte) 0x05; // option 05 is targeted
+        ByteArrayOutputStream baosMacInput = new ByteArrayOutputStream();
+        baosMacInput.write(SET_CONFIGURATION_COMMAND); // 0x5C
+        baosMacInput.write(commandCounterLsb1, 0, commandCounterLsb1.length);
+        baosMacInput.write(TransactionIdentifier, 0, TransactionIdentifier.length);
+        baosMacInput.write(CMD_HEADER);
+        baosMacInput.write(encryptedData, 0, encryptedData.length);
+        byte[] macInput = baosMacInput.toByteArray();
+        log(methodName, printData("macInput", macInput));
+        if (testMode) {
+            byte[] macInputExp = hexStringToByteArray("5C0000ED56F6E60541B2BA963075730426D0858D2AA6C498");
+            if (!Arrays.equals(macInput, macInputExp)) {
+                Log.e(TAG, "macInput does not match the expected value, aborted");
+                return false;
+            }
+        }
+
+        // generate the MAC (CMAC) with the SesAuthMACKey
+        log(methodName, printData("SesAuthMACKey", SesAuthMACKey));
+        byte[] macFull = calculateDiverseKey(SesAuthMACKey, macInput);
+        log(methodName, printData("macFull", macFull));
+        // now truncate the MAC
+        byte[] macTruncated = truncateMAC(macFull);
+        log(methodName, printData("macTruncated", macTruncated));
+        if (testMode) {
+            byte[] macTruncatedExp = hexStringToByteArray("2F579E77FAB49F83");
+            if (!Arrays.equals(macTruncated, macTruncatedExp)) {
+                Log.e(TAG, "macTruncated does not match the expected value, aborted");
+                return false;
+            }
+        }
+
+        // Data (CmdHeader || Encrypted Data || MAC)
+        ByteArrayOutputStream baosWriteDataCommand = new ByteArrayOutputStream();
+        baosWriteDataCommand.write(CMD_HEADER);
+        baosWriteDataCommand.write(encryptedData, 0, encryptedData.length);
+        baosWriteDataCommand.write(macTruncated, 0, macTruncated.length);
+        byte[] writeDataCommand = baosWriteDataCommand.toByteArray();
+        log(methodName, printData("SetConfigurationCommand", writeDataCommand));
+
+        byte[] response = new byte[0];
+        byte[] apdu = new byte[0];
+        try {
+            apdu = wrapMessage(SET_CONFIGURATION_COMMAND, writeDataCommand);
+            if (testMode) {
+                /**
+                 * The apduExp in the DESFire Light Hints & Feature is WRONG
+                 * When using the shortened version (without '00' after '05') it works
+                 */
+                // is this value (apduExp) correct ? The step 25 (Data (Cmd Header || Encrypted Data || MAC)) is showing this data:
+                //                                                    0541B2BA963075730426D0858D2AA6C4982F579E77FAB49F83
+                byte[] apduExp = hexStringToByteArray("905C000019050041B2BA963075730426D0858D2AA6C4982F579E77FAB49F8300");
+                // changing to this apduExp, then command is running with success :
+                apduExp = hexStringToByteArray("905C0000190541B2BA963075730426D0858D2AA6C4982F579E77FAB49F8300");
+                if (!Arrays.equals(apdu, apduExp)) {
+                    log(methodName, printData("apdu   ", apdu));
+                    log(methodName, printData("apduExp", apduExp));
+                    Log.e(TAG, "apdu does not match the expected value, aborted");
+                    return false;
+                } else {
+                    log(methodName, "apdu matches the test vector, ending with TEST SUCCESS");
+                    log(methodName, "NO sendData to PICC run, ended");
+                    errorCode = RESPONSE_OK.clone();
+                    errorCodeReason = "TEST SUCCESS";
+                    return true;
+                }
+            }
+
+            response = sendData(apdu);
+        } catch (IOException e) {
+            Log.e(TAG, methodName + " transceive failed, IOException:\n" + e.getMessage());
+            log(methodName, "transceive failed: " + e.getMessage(), false);
+            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            return false;
+        }
+        byte[] responseBytes = returnStatusBytes(response);
+        System.arraycopy(responseBytes, 0, errorCode, 0, 2);
+        if (checkResponse(response)) {
+            Log.d(TAG, methodName + " SUCCESS");
+        } else {
+            Log.d(TAG, methodName + " FAILURE with error code " + Utils.bytesToHexNpeUpperCase(responseBytes));
+            Log.d(TAG, methodName + " error code: " + EV3.getErrorCode(responseBytes));
+            return false;
+        }
+        // note: after sending data to the card the commandCounter is increased by 1
+        CmdCounter++;
+        log(methodName, "the CmdCounter is increased by 1 to " + CmdCounter);
+        return true;
     }
 
     public List<byte[]> getReadAllFileContents() {
@@ -2173,7 +2393,7 @@ PERMISSION_DENIED
         // example: 00000000300000
 
         // MAC_Input
-        byte[] commandCounterLsb1 = Utils.intTo2ByteArrayInversed(CmdCounter);
+        byte[] commandCounterLsb1 = intTo2ByteArrayInversed(CmdCounter);
         log(methodName, "CmdCounter: " + CmdCounter);
         log(methodName, printData("commandCounterLsb1", commandCounterLsb1));
         ByteArrayOutputStream baosMacInput = new ByteArrayOutputStream();
@@ -2242,7 +2462,7 @@ PERMISSION_DENIED
 
         // start decrypting the data
         byte[] commandCounterLsb2 =
-                Utils.intTo2ByteArrayInversed(CmdCounter);
+                intTo2ByteArrayInversed(CmdCounter);
         byte[] padding = hexStringToByteArray("0000000000000000");
         byte[] startingIv = new byte[16];
         ByteArrayOutputStream decryptBaos = new ByteArrayOutputStream();
@@ -2414,7 +2634,7 @@ PERMISSION_DENIED
         // step 8
         // IV_Input (IV_Label || TI || CmdCounter || Padding)
         // MAC_Input
-        byte[] commandCounterLsb1 = Utils.intTo2ByteArrayInversed(CmdCounter);
+        byte[] commandCounterLsb1 = intTo2ByteArrayInversed(CmdCounter);
         log(methodName, "CmdCounter: " + CmdCounter);
         log(methodName, printData("commandCounterLsb1", commandCounterLsb1));
         byte[] padding1 = hexStringToByteArray("0000000000000000"); // 8 bytes
@@ -2739,7 +2959,7 @@ PERMISSION_DENIED
 
         // Encrypting the Command Data
         // IV_Input (IV_Label || TI || CmdCounter || Padding)
-        byte[] commandCounterLsb = Utils.intTo2ByteArrayInversed(CmdCounter);
+        byte[] commandCounterLsb = intTo2ByteArrayInversed(CmdCounter);
         log(methodName, "CmdCounter: " + CmdCounter);
         log(methodName, printData("commandCounterLsb", commandCounterLsb));
         byte[] padding1 = hexStringToByteArray("0000000000000000"); // 8 bytes
@@ -3277,7 +3497,7 @@ SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ Rn
 
     private boolean verifyResponseMac(byte[] responseMAC, byte[] responseData) {
         final String methodName = "verifyResponseMac";
-        byte[] commandCounterLsb = Utils.intTo2ByteArrayInversed(CmdCounter);
+        byte[] commandCounterLsb = intTo2ByteArrayInversed(CmdCounter);
         ByteArrayOutputStream responseMacBaos = new ByteArrayOutputStream();
         responseMacBaos.write((byte) 0x00); // response code 00 means success
         responseMacBaos.write(commandCounterLsb, 0, commandCounterLsb.length);
@@ -3413,6 +3633,26 @@ SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ Rn
         } else {
             return false;
         }
+    }
+
+    private boolean checkAuthenticateAesEv2() {
+        if ((!authenticateEv2FirstSuccess) & (!authenticateEv2NonFirstSuccess)) {
+            log("checkAuthenticateAesEv2", "issing successful authentication with EV2First or EV2NonFirst, aborted");
+            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            errorCodeReason = "missing successful authentication with EV2First or EV2NonFirst, aborted";
+            return false;
+        }
+        return true;
+    }
+
+    private boolean checkIsoDep() {
+        if ((isoDep == null) || (!isoDep.isConnected())) {
+            log("checkIsoDep", "lost connection to the card, aborted");
+            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            errorCodeReason = "lost connection to the card";
+            return false;
+        }
+        return true;
     }
 
     private byte[] returnStatusBytes(byte[] data) {

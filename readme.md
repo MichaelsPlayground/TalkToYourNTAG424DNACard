@@ -2,6 +2,15 @@
 
 This is a sample app to demonstrate how to work with a Mifare NTAG424DNA card. 
 
+If you are going to buy these tags just have a look at the offer by **shopNfc**
+
+https://www.shopnfc.com/en/nfc-stickers/487-nfc-stickers-ntag424-dna-d22mm.html
+
+They cost about 1 Euro per piece (minimum quantity of 10 pieces) and it's a free 
+delivery around the world.
+
+Note: I am not affiliated to shopNfc and I don't get any reward for these lines.
+
 ## project / app status
 
 At the moment the  app is just a stub with no real functions as it is a 1:1 copy 
@@ -181,5 +190,41 @@ Settings for file 02:
 
 ```
 
+```plaintext
 
+    /**
+     * Note: to run LRP tasks the PICC has to be in LRP mode. You can find code for this mode
+     * in Mifare DESFire Light Features and Hints AN12343.pdf pages 43 + 44
+     * This is an IRREVERSIBLE action and PERMANENTLY disables AES secure messaging, meaning
+     * LRP secure messaging is required to be used for all future sessions.
+     * As I'm on limited resources (number of DESFire EV2/EV3 tags I'm skipping any experiments
+     * on this feature,sorry.
+     *
+     * see MIFARE DESFire Light contactless application IC MF2DLHX0.pdf page 24
+     * (Table 18 Secure messaging mode negotiation)
+     *
+     * Reader is asking the mode    || PICC is in mode xx and answers as follows
+     * PCD is requesting | PDCap2.1 || PDCap2    | PICC answers       | Comments
+     * mode:             | value    || value     |                    |
+     * ------------------|----------||-----------|--------------------|-------------------------
+     * EV2 Secure        |   00h    || 00h (AES) | 17 bytes with AFh  | reader and PICC use AES
+     * Messaging (AES)   |          ||           | (16 bytes rndB)    |
+     * ------------------|----------||-----------|--------------------|-------------------------
+     * EV2 Secure        |   00h    || 02h (LRP) | Permission denied  | no authentication
+     * Messaging (AES)   |          ||           | 9dh                | available possible
+     * ------------------|----------||-----------|--------------------|-------------------------
+     * ------------------|----------||-----------|--------------------|-------------------------
+     * LRP Secure        |   02h    || 00h (AES) | 1 byte with AFh    | no authentication but
+     * Messaging         |          ||           |                    | reader can use AES next
+     * ------------------|----------||-----------|--------------------|-------------------------
+     * LRP Secure        |   02h    || 02h (LRP) | 18 bytes with AFh  | reader and PICC use LRP
+     * Messaging         |          ||           | (1 byte auth mode  |
+     *                   |          ||           | (16 bytes rndB     |
+     * ------------------|----------||-----------|--------------------|-------------------------
+     *
+     * So in short: you can test LRP when PICC is in LRP mode only
+     *
+     */
+
+```
 
