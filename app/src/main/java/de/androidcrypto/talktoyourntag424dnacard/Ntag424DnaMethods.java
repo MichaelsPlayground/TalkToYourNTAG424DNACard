@@ -127,6 +127,17 @@ public class Ntag424DnaMethods {
     // note on TransactionIdentifier: LSB encoding
 
     /**
+     * variables in this section are used in LRP mode
+     */
+
+    private List<byte[]> secretPlaintexts00; // pre generated per application key, here for application key 00 // 'SesAuthSPT'
+    private List<byte[]> updateKeys00; // pre generated per application key, here for application key 00 // 'AuthUpdateKey'
+
+    private byte[] SesAuthMaster; // pre generated per application key, here for application key 00
+
+
+
+    /**
      * the CommunicationAdapter is initialized on initializing this class
      */
 
@@ -1773,7 +1784,7 @@ PERMISSION_DENIED
         byte[] iv = new byte[16];
         // step 15: Round 1: Pre-Step: Length-doubling PRG - Updated key for 0x55
         // AES-Encrypt: EKx(0x55555555555555555555555555555555) = 9ADAE054F63DFAFF5EA18E45EDF6EA6F
-        byte[] data0x55 = hexStringToByteArray("55555555555555555555555555555555");
+        final byte[] data0x55 = hexStringToByteArray("55555555555555555555555555555555");
         byte[] updatedKey0x55 = AES.encrypt(iv, authenticationKey, data0x55);
         if (TEST_MODE_GEN_LRP_SES_KEYS) {
             byte[] updatedKey0x55Exp = hexStringToByteArray("9ADAE054F63DFAFF5EA18E45EDF6EA6F");
@@ -1788,7 +1799,7 @@ PERMISSION_DENIED
 
         // step 16: Round 1: Pre-Step: Length-doubling PRG - Encryption of 0xAA
         // AES-Encrypt: EKx(0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA) = 8522717D3AD1FBFEAFA1CEAAFDF56565
-        byte[] data0xaa = hexStringToByteArray("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+        final byte[] data0xaa = hexStringToByteArray("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
         byte[] updatedKey0xaa = AES.encrypt(iv, authenticationKey, data0xaa);
         if (TEST_MODE_GEN_LRP_SES_KEYS) {
             byte[] updatedKey0xaaExp = hexStringToByteArrayMinus("8522717D3AD1FBFEAFA1CEAAFDF56565");
@@ -1804,6 +1815,8 @@ PERMISSION_DENIED
         if (TEST_MODE_GEN_LRP_SES_KEYS) {
             // see Leakage Resilient Primitive (LRP) Specification AN12304.pdf pages 10 ff
             // 3.1 LRP Eval in detail - 1. Test Vectors
+            // Here, Base key refers to k in Algorithms 1 and 2. P[i] maps to pi in Algorithm 1 and
+            // UK[i] maps to ki in Algorithm 2.
 
             // Generating Secret Plaintexts and Updated Keys
             byte[] tBaseKey = hexStringToByteArrayMinus("567826B8DA8E768432A9548DBE4AA3A0");
@@ -1895,9 +1908,96 @@ PERMISSION_DENIED
             if (!compareArrays(t15Ciphertext, t15CiphertextExp, "t15Ciphertext"));
 
 
+            /**
+             *
+             * this is the complete workflow for setting up the keys for a real key
+             * here shown solely for key 0x00
+             *
+             */
+            secretPlaintexts00 = new ArrayList<>(); // clear the list
+            updateKeys00 = new ArrayList<>(); // clear the list
+            // we are starting with a BaseKey = the "real" application key
+            // test vector taken from:
+            // see Leakage Resilient Primitive (LRP) Specification AN12304.pdf pages 10 ff
+            // 3.1 LRP Eval in detail - 1. Test Vectors
+            // Here, Base key refers to k in Algorithms 1 and 2. P[i] maps to pi in Algorithm 1 and
+            // UK[i] maps to ki in Algorithm 2.
+            byte[] tBaseKey00 = hexStringToByteArrayMinus("567826B8DA8E768432A9548DBE4AA3A0"); //
+            // we do have 2 input data:
+            // byte[] data0x55 = hexStringToByteArray("55555555555555555555555555555555");
+            // byte[] data0xaa = hexStringToByteArray("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
 
+            byte[] baseKeyCiphertextForPlaintexts; // this key is the starting key for generating the 16 secret plaintexts
+            baseKeyCiphertextForPlaintexts = AES.encrypt(iv, tBaseKey00, data0x55);
 
+            // generate the 16 secret plaintext (AES keys)
+            byte[] previousCiphertext55 = baseKeyCiphertextForPlaintexts.clone(); // init the key
+            byte[] keyForNextSecretPlaintext;
+            byte[] secretPlaintext;
+            for (int i = 0; i < 16; i++) {
+                secretPlaintext = AES.encrypt(iv, previousCiphertext55, data0xaa);
+                log(methodName, "secretPlaintext " + i + printData(" secretPlaintext", secretPlaintext));
+                secretPlaintexts00.add(secretPlaintext);
+                keyForNextSecretPlaintext = AES.encrypt(iv, previousCiphertext55, data0x55);
+                log(methodName, "keyForNextSecretPlaintext " + i + printData(" keyForNextSecretPlaintext", keyForNextSecretPlaintext));
+                // this is the next starting key
+                previousCiphertext55 = keyForNextSecretPlaintext.clone();
+            }
+            log(methodName, "-----------------------");
+            byte[] secretPlaintext15 = secretPlaintexts00.get(15);
+            byte[] secretPlaintext15Exp = hexStringToByteArrayMinus("71-B4-44-AF-25-7A-93-21-53-11-D7-58-DD-33-32-47");
+            log(methodName, printData("secretPlaintext15", secretPlaintext15));
+            if (!compareArrays(secretPlaintext15, secretPlaintext15Exp, "secretPlaintext15"));
+            log(methodName, "-----------------------");
 
+            // generate the update keys, similar to secret plaintexts
+            byte[] baseKeyCiphertextForUpdateKey; // this key is the starting key for generating the update key
+            baseKeyCiphertextForUpdateKey = AES.encrypt(iv, tBaseKey, data0xaa);
+
+            byte[] previousCiphertextAa = baseKeyCiphertextForUpdateKey.clone();
+            byte[] keyForNextUpdateKey;
+            byte[] updateKey;
+            for (int i = 0; i < 16; i++) {
+                updateKey = AES.encrypt(iv, previousCiphertextAa, data0xaa);
+                log(methodName, "updateKey " + i + printData(" updateKey", updateKey));
+                updateKeys00.add(updateKey);
+                keyForNextUpdateKey = AES.encrypt(iv, previousCiphertextAa, data0x55);
+                log(methodName, "keyForNextUpdateKey " + i + printData(" keyForNextUpdateKey", keyForNextUpdateKey));
+                // this is the next starting key
+                previousCiphertextAa = keyForNextUpdateKey.clone();
+            }
+            log(methodName, "-----------------------");
+            for (int i = 0; i < 16; i++) {
+                byte[] updateKeyP = updateKeys00.get(i);
+                //byte[] updateKey15Exp = hexStringToByteArrayMinus(""); // not known
+                // updateKey 00, 01 + 02 equals to LRP document
+                log(methodName, printData("updateKey " + i + ": ", updateKeyP));
+            }
+            log(methodName, "-----------------------");
+
+            // I'm not for sure if we do need 16 update keys, Mifare DESFire Light Features and Hints AN12343.pdf
+            // is just using updateKey00 for generating of SesAuthMaster and Session Keys
+
+            // Mifare DESFire Light Features and Hints AN12343.pdf page 49
+            log(methodName, "Generation of KSesAuthMaster");
+            // test vectors
+            rndA = hexStringToByteArray("74D7DF6A2CEC0B72B412DE0D2B1117E6");
+            rndB = hexStringToByteArray("56109A31977C855319CD4618C9D2AED2");
+            byte[] testSessionVector = getLrpSessionVector(rndA, rndB);
+            log(methodName, printData("testSessionVector", testSessionVector));
+            byte[] testSessionVectorExp = hexStringToByteArray("0001008074D7897AB6DD9C0E855319CD4618C9D2AED2B412DE0D2B1117E69669");
+            compareArrays(testSessionVector, testSessionVectorExp, "testSessionVector");
+
+            // Generation of KSesAuthMaster
+            // KSesAuthMaster = CMAC-LRP(AuthUpdateKey, Session Vector)
+            // Session vector is from the beginning:
+            // counter || length tag || RndA[15::14] || (RndA[13::8] XOR RndB[15::10]) || RndB[9::0] || RndA[7::0] || label
+            // CMAC_LRP(50A26CB5DF307E483DE532F6AFBEC27B, 0001008074d7897AB6DD9C0E855319CD4618C9D2AED2B412DE0D2B1117E69669) = 132D7E6F35BA861F39B37221214E25A5
+            byte[] testUpdateKey = hexStringToByteArray("50A26CB5DF307E483DE532F6AFBEC27B");
+            //byte[] testSesAuthMaster = calculateDiverseKey(testUpdateKey, testSessionVector);
+            byte[] testSesAuthMaster = calculateDiverseKeyLrp(testUpdateKey, testSessionVector);
+            byte[] testSesAuthMasterExp = hexStringToByteArray("132D7E6F35BA861F39B37221214E25A5");
+            compareTestModeValues(testSesAuthMaster, testSesAuthMasterExp, "testSesAuthMaster");
 
 
 
@@ -1963,6 +2063,56 @@ SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ Rn
             boolean testResult = compareTestModeValues(cmac, SesAuthENCKey_expected, "SesAUthENCKey");
         }
         return false;
+    }
+
+    /**
+     * see scheme in Mifare DESFire Light Features and Hints AN12343.pdf page 38
+     * @return
+     */
+    private byte[] calculateDiverseKeyLrp(byte[] key, byte[] iv) {
+        // todo sanity checks
+        byte[] loopIv = new byte[16];
+        byte[] ciphertext = new byte[0];
+        for (int i = 0; i < 16; i++) {
+            byte[] plaintext = secretPlaintexts00.get(i);
+            ciphertext = AES.encrypt(loopIv, key, plaintext);
+            loopIv = ciphertext.clone();
+        }
+        return ciphertext;
+    }
+
+
+    private byte[] getLrpSessionVector(byte[] rndA, byte[] rndB) {
+        String methodName = "getLrpSessionVector";
+        // todo sanity checks
+        log(methodName, printData("rndA        ", rndA));
+        log(methodName, printData("rndB        ", rndB));
+
+        // 74 D7 DF 6A 2C EC 0B 72 B4 12 DE 0D 2B 11 17 E6
+        //  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
+        byte[] rndA00to01 = Arrays.copyOfRange(rndA, 0, 2); // step 06 74d7
+        byte[] rndA02to07 = Arrays.copyOfRange(rndA, 2, 8); // step 07 DF6A2CEC0B72
+        byte[] rndA08to15 = Arrays.copyOfRange(rndA, 8, 16); // step 11 (wrong: 2B412DE0D2B1117E), correct B412DE0D2B1117E6
+        // 56 10 9A 31 97 7C 85 53 19 CD 46 18 C9 D2 AE D2
+        //  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
+        byte[] rndB00to05 = Arrays.copyOfRange(rndB, 0, 6); // step 08 56109A31977C
+        byte[] rndB06to15 = Arrays.copyOfRange(rndB, 6, 16); // step 10 855319CD4618C9D2AED2
+        byte[] xored = xor(rndA02to07, rndB00to05); // step 09
+        // step 12 sessionVector
+        // counter || length tag || RndA[15::14] || (RndA[13::8] XOR RndB[15::10]) || RndB[9::0] || RndA[7::0] || label
+        // counter || length tag || rndA00to01   || xored                          || rndB06to15 || rndA08to15 || label
+        // 0001008074D7897AB6DD9C0E855319CD4618C9D2AED2B412DE0D2B1117E69669
+        ByteArrayOutputStream baosSessionVector = new ByteArrayOutputStream();
+        baosSessionVector.write(LRP_FIXED_COUNTER, 0, LRP_FIXED_COUNTER.length);
+        baosSessionVector.write(LRP_FIXED_LENGTH, 0, LRP_FIXED_LENGTH.length);
+        baosSessionVector.write(rndA00to01, 0, rndA00to01.length);
+        baosSessionVector.write(xored, 0, xored.length);
+        baosSessionVector.write(rndB06to15, 0, rndB06to15.length);
+        baosSessionVector.write(rndA08to15, 0, rndA08to15.length);
+        baosSessionVector.write(LRP_FIXED_LABEL, 0, LRP_FIXED_LABEL.length);
+        byte[] sessionVector = baosSessionVector.toByteArray();
+        log(methodName, printData("sessionVector", sessionVector));
+        return sessionVector;
     }
 
     private boolean compareArrays (byte[] arr, byte[] arrExpected, String arrName) {
