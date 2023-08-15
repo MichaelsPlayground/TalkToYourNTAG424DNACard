@@ -1513,6 +1513,9 @@ PERMISSION_DENIED
             apdu = wrapMessage(GET_ADDITIONAL_FRAME_COMMAND, rndArndB_leftRotated_enc);
             log(methodName, "send rndArndB_leftRotated_enc " + printData("apdu", apdu));
             response = isoDep.transceive(apdu);
+
+            // todo THIS step is FAILING with AE error
+
             log(methodName, "send rndArndB_leftRotated_enc " + printData("response", response));
         } catch (IOException e) {
             Log.e(TAG, methodName + " transceive failed, IOException:\n" + e.getMessage());
