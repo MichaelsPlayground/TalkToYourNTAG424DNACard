@@ -31,6 +31,9 @@ import java.util.List;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
+import de.androidcrypto.talktoyourntag424dnacard.lrp.LrpCipher;
+import de.androidcrypto.talktoyourntag424dnacard.lrp.LrpMultiCipher;
+
 /**
  * This class is taking all methods to work with NXP NTAG 424 DNA tag
  * The read and write communication is done using the
@@ -2006,8 +2009,16 @@ PERMISSION_DENIED
 
         // step 17: AuthSPT [0] = B5CBF983BBE3C458189436288813EC30
 
+        // this is using the hardcoded LRP
+        /*
+        byte[] lrpKey = new byte[16];
+        LrpMultiCipher mc = new LrpMultiCipher(lrpKey);
+        // grab a cipher using key 1
+        LrpCipher c =  mc.cipher(1);
 
-
+        // Encrypt/Decrypt
+        byte[] encryptedMessage = c.EncryptAll
+*/
 
 
         // hard coded exit

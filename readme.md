@@ -228,3 +228,17 @@ Settings for file 02:
 
 ```
 
+A running implementation (Go language) for LRP encryption and CMAC is here (importing libs):
+
+https://replit.com/@javacrypto/GoLrpCryptoLibImport#main.go
+
+This version has the complete source code in files:
+
+https://replit.com/@javacrypto/GoLrpCrypto#main.go
+
+This is the debug version with lots of printouts:
+
+https://replit.com/@javacrypto/GoLrpCryptoDebug#main.go
+
+
+
