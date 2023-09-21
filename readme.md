@@ -230,6 +230,8 @@ Settings for file 02:
 
 A running implementation (Go language) for LRP encryption and CMAC is here (importing libs):
 
+(taken from https://github.com/johnnyb/gocrypto)
+
 https://replit.com/@javacrypto/GoLrpCryptoLibImport#main.go
 
 This version has the complete source code in files:
@@ -239,6 +241,17 @@ https://replit.com/@javacrypto/GoLrpCrypto#main.go
 This is the debug version with lots of printouts:
 
 https://replit.com/@javacrypto/GoLrpCryptoDebug#main.go
+
+```plaintext
+github.com/aead/cmac v0.0.0-20160719120800-7af84192f0b1 h1:+JkXLHME8vLJafGhOH4aoV2Iu8bR55nU6iKMVfYVLjY=
+github.com/aead/cmac v0.0.0-20160719120800-7af84192f0b1/go.mod h1:nuudZmJhzWtx2212z+pkuy7B6nkBqa+xwNXZHL1j8cg=
+github.com/johnnyb/gocrypto v0.1.4 h1:pBfP8uDGIpjKb1n4b+rjQVonuBEacGuvUH7xsYiQ3iU=
+github.com/johnnyb/gocrypto v0.1.4/go.mod h1:oMU+9Pii7IrLl2I/wRvPNwbcpbr3/AH4FqD++p4SJy0=
+```
+
+Python: https://github.com/lucianox777/nfc-ev2-crypto/tree/master
+
+https://replit.com/@javacrypto/PythonLrpExample#test_lrp.py
 
 
 
