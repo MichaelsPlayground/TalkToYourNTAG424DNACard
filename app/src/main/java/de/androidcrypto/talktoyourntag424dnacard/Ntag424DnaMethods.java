@@ -1558,7 +1558,7 @@ PERMISSION_DENIED
          */
 
         boolean sessionKeySuccess = generateLrpSessionKeys(rndA, rndB, key);
-
+        log(methodName, "sessionKeySuccess: " + sessionKeySuccess);
 
         // AuthenticateLRPFirst Part 2
         // step 19 (should be done BEFORE step 18 as in setp 18 the data is needed ??
