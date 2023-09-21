@@ -1981,7 +1981,10 @@ PERMISSION_DENIED
             // I'm not for sure if we do need 16 update keys, Mifare DESFire Light Features and Hints AN12343.pdf
             // is just using updateKey00 for generating of SesAuthMaster and Session Keys
 
+            // steps 33 ff Generation of AuthUpdateKey
+
             // Mifare DESFire Light Features and Hints AN12343.pdf page 49
+            // step 37
             log(methodName, "Generation of KSesAuthMaster");
             // test vectors
             rndA = hexStringToByteArray("74D7DF6A2CEC0B72B412DE0D2B1117E6");
@@ -1989,7 +1992,9 @@ PERMISSION_DENIED
             byte[] testSessionVector = getLrpSessionVector(rndA, rndB);
             log(methodName, printData("testSessionVector", testSessionVector));
             byte[] testSessionVectorExp = hexStringToByteArray("0001008074D7897AB6DD9C0E855319CD4618C9D2AED2B412DE0D2B1117E69669");
-            compareArrays(testSessionVector, testSessionVectorExp, "testSessionVector");
+            //compareArrays(testSessionVector, testSessionVectorExp, "testSessionVector");
+
+            compareTestModeValues(testSessionVector, testSessionVectorExp, "testSessionVector");
 
             // Generation of KSesAuthMaster
             // KSesAuthMaster = CMAC-LRP(AuthUpdateKey, Session Vector)

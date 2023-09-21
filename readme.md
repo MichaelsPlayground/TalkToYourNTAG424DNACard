@@ -57,6 +57,8 @@ NTAG 424 DNA NT4H2421Gx.pdf: https://www.nxp.com/docs/en/data-sheet/NT4H2421Gx.p
 
 NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf: https://www.nxp.com/docs/en/application-note/AN12196.pdf
 
+NTAG 424 DNA (TagTamper) features and hints - LRP mode AN12321.pdf: https://www.nxp.com/docs/en/application-note/AN12321.pdf
+
 NFCJLIB library: https://github.com/andrade/nfcjlib
 
 Type of messaging:
@@ -70,7 +72,7 @@ This app always uses ISO/IEC 7816-4 wrapped comands.
 
 Mifare type identification procedure AN10833.pdf
 
-Note: a 0x9D error ('Permission denied') may occur when sesTMC reached its maximal value or TMCLimit was reached. 
+Note: a 0x9D error ('Permission denied') may occur when sesTMC reached its maximal value or TMCLimit was reached.
 
 ```plaintext
 However, I can provide you with the following information about the "SET CONFIGURATION" command:
