@@ -340,7 +340,7 @@ public class LrpAuthentication {
         List<byte[]> blockS = Utils.divideArrayToList(ptStream, 16);
         ByteArrayOutputStream baosCt = new ByteArrayOutputStream();
         for (int i = 0; i < blockS.size(); i++) {
-            byte[] y = eval_lrp(this.p, this.kp, this.r);
+            byte[] y = eval_lrp(this.p, this.kp, this.r, true, verbose);
             byte[] block = blockS.get(i);
             byte[] ct = e(y, block);
             baosCt.write(ct, 0, ct.length);
@@ -348,6 +348,16 @@ public class LrpAuthentication {
         }
         byte[] ciphertext = baosCt.toByteArray();
         if (verbose) Log.d(TAG, printData("ciphertext", ciphertext));
+        return null;
+    }
+
+    private byte[] eval_lrp(byte[][] p, byte[] kp, byte[] x, boolean isFinal, boolean verbose) {
+        if (verbose) Log.d(TAG, "eval_lrp with p[][] " + printData("kp", kp) + printData(" x", x) + " isFinal: " + isFinal);
+        // Algorithm 3 assuming m = 4
+        byte[] y = kp.clone();
+
+
+
         return null;
     }
 
