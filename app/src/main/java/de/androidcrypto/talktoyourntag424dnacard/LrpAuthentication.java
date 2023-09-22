@@ -170,7 +170,7 @@ public class LrpAuthentication {
         boolean initSuccess = _init(key, 0, counter, true, true);
         if (verbose) Log.d(TAG, "init library success");
         //String lrp = LRP(key, 0, counter, true); // true = pad
-        byte[] ct = encrypt(pt);
+        byte[] ct = encrypt(pt, verbose);
         return false;
     }
 
