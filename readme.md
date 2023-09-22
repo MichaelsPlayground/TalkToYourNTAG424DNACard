@@ -255,5 +255,14 @@ Python: https://github.com/lucianox777/nfc-ev2-crypto/tree/master
 
 https://replit.com/@javacrypto/PythonLrpExample#test_lrp.py
 
+## Dependencies
+
+Shamir's Secret Sharing: https://github.com/codahale/shamir
+
+The code is used natively
+
+License: Apache License 2.0
+
+**Note: this package requires a minimum SDK of 24.**
 
 
