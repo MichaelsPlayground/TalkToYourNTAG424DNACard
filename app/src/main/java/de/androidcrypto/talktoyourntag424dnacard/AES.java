@@ -32,6 +32,25 @@ public class AES {
 
 	private static final String TAG = AES.class.getName();
 
+	public static byte[] encrypt(byte[] myIV, byte[] myKey, byte[] myMsg, boolean verbose) {
+		if (verbose) Log.d(TAG, "encrypt with " + printData("myIV", myIV) + printData(" myKey", myKey) + printData(" myMsg", myMsg));
+		byte[] cipherText = null;
+		try {
+			IvParameterSpec iv = new IvParameterSpec(myIV);
+			SecretKey sks = new SecretKeySpec(myKey, "AES");
+			Cipher cipher = Cipher.getInstance("AES/CBC/NoPadding");
+			cipher.init(Cipher.ENCRYPT_MODE, sks, iv);
+			cipherText = cipher.doFinal(myMsg);
+		} catch (Exception e) {
+			//TODO: multicatch only Java 1.7+
+			e.printStackTrace();
+			return null;
+		}
+		return cipherText;
+	}
+
+
+
 	public static byte[] encrypt(byte[] myIV, byte[] myKey, byte[] myMsg) {
 		Log.d(TAG, "encrypt with " + printData("myIV", myIV) + printData(" myKey", myKey) + printData(" myMsg", myMsg));
 		byte[] cipherText = null;

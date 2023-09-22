@@ -421,6 +421,8 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         changeKeyDes01ToDefault2DesVisualizing = findViewById(R.id.btnDesVisualizeChangeKeyDes01ToDefault2);
 
         // tests
+        LrpAuthentication lrp = new LrpAuthentication(null); // todo change to onDetected, otherwise failure
+        lrp.runAllTests();
         testNdefTemplate = findViewById(R.id.btnTestNdefTemplate);
 
         // some presets
@@ -429,6 +431,8 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         fileStandardFileId.setText(String.valueOf((int) STANDARD_FILE_FREE_ACCESS_ID)); // preset is FREE ACCESS
 
         activity = MainActivity.this;
+
+
 
         /**
          * just es quick test button
