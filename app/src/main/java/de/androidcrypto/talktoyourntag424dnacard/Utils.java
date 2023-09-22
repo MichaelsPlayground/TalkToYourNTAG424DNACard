@@ -251,6 +251,56 @@ public class Utils {
         return bytes[3] << 24 | (bytes[2] & 0xFF) << 16 | (bytes[1] & 0xFF) << 8 | (bytes[0] & 0xFF);
     }
 
+    public static char intToUpperNibble(int input) {
+        final char[] hexArray = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
+        //int v = input & 0xFF; // Cast byte to int, treating as unsigned value
+        int v = input;
+        return hexArray[v >>> 4]; // Select hex character from upper nibble
+    }
+
+    public static char byteToUpperNibble(Byte input) {
+        final char[] hexArray = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
+        int v = input & 0xFF; // Cast byte to int, treating as unsigned value
+        return hexArray[v >>> 4]; // Select hex character from upper nibble
+    }
+
+    public static char byteToLowerNibble(Byte input) {
+        final char[] hexArray = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
+        int v = input & 0xFF; // Cast byte to int, treating as unsigned value
+        return hexArray[v & 0x0F]; // Select hex character from lower nibble
+    }
+
+    public static byte nibblesToByte(char upperNibble, char lowerNibble) {
+        String data = String.valueOf(upperNibble) + String.valueOf(lowerNibble);
+        byte[] byteArray = hexStringToByteArray(data);
+        return byteArray[0];
+    }
+
+    public static int byteToUpperNibbleInt(Byte input) {
+        return (input & 0xF0 ) >> 4;
+    }
+
+    public static int byteToLowerNibbleInt(Byte input) {
+        return input & 0x0F;
+    }
+
+    public static List<Integer> getNibblesFromByteArray(byte[] data) {
+        if ((data == null) || (data.length < 1)) {
+            return null;
+        }
+        int length = data.length;
+        List<Integer> list = new ArrayList<>();
+        for (int i = 0; i < length; i++) {
+            byte dataByte = data[i];
+            int upperNibbleInt = Utils.byteToUpperNibbleInt(dataByte);
+            int loweNibbleInt  = Utils.byteToLowerNibbleInt(dataByte);
+            list.add(upperNibbleInt);
+            list.add(loweNibbleInt);
+        }
+        return list;
+    }
+
+
     /**
      * splits a byte array in chunks
      *

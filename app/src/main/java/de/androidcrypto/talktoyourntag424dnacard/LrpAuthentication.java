@@ -171,7 +171,8 @@ public class LrpAuthentication {
         if (verbose) Log.d(TAG, "init library success");
         //String lrp = LRP(key, 0, counter, true); // true = pad
         byte[] ct = encrypt(pt, verbose);
-        return false;
+        if (!compareTestValues(ct, ctExp, "ct", verbose)) return false;
+        return true;
     }
 
     private boolean test_lricb_dec(boolean verbose) {
@@ -179,6 +180,15 @@ public class LrpAuthentication {
         byte[] key = Utils.hexStringToByteArray("");
         byte[] ct = Utils.hexStringToByteArray("FCBBACAA4F29182464F99DE41085266F480E863E487BAAF687B43ED1ECE0D623");
         byte[] ptExp = Utils.hexStringToByteArray("012D7F1653CAF6503C6AB0C1010E8CB0");
+        byte[] counter = Utils.hexStringToByteArray("C3315DBF");
+        boolean initSuccess = _init(key, 0, counter, true, true);
+        if (verbose) Log.d(TAG, "init library success");
+        //String lrp = LRP(key, 0, counter, true); // true = pad
+        byte[] pt = decrypt(ct, verbose);
+        if (!compareTestValues(pt, ptExp, "pt", verbose)) return false;
+        return true;
+
+
         return false;
     }
 
@@ -317,6 +327,11 @@ public class LrpAuthentication {
     }
 
     private byte[] encrypt(byte[] data, boolean verbose) {
+        /**
+         * LRICB encrypt and update counter (LRICBEnc)
+         * param data: plaintext
+         * return: ciphertext
+         */
         if (verbose) Log.d(TAG, "encrypt " + printData("data", data));
         if (data == null) {
             if (verbose) Log.e(TAG, "encrypt: data is null, aborted");
@@ -351,14 +366,57 @@ public class LrpAuthentication {
         return null;
     }
 
+    private byte[] decrypt(byte[] data, boolean verbose) {
+        /**
+         * LRICB decrypt and update counter (LRICBDecs)
+         * param data: ciphertext
+         * return: plaintext
+         */
+        if (verbose) Log.d(TAG, "decrypt " + printData("data", data));
+        if (data == null) {
+            if (verbose) Log.e(TAG, "decrypt: data is null, aborted");
+            return null;
+        }
+        if (!isMultiple(data.length, 16)) {
+            if (verbose) Log.e(TAG, "decrypt: data length is not a multiple of AES block size (16)");
+            return null;
+        }
+
+        if (verbose) Log.d(TAG, printData("ctStream", data));
+        List<byte[]> blockS = Utils.divideArrayToList(data, 16);
+        ByteArrayOutputStream baosPt = new ByteArrayOutputStream();
+        for (int i = 0; i < blockS.size(); i++) {
+            byte[] y = eval_lrp(this.p, this.kp, this.r, true, verbose);
+            byte[] block = blockS.get(i);
+            byte[] pt = e(y, block);
+            baosPt.write(pt, 0, pt.length);
+            this.r = incr_counter(this.r);
+        }
+        byte[] plaintext = baosPt.toByteArray();
+        // remove a padding
+        if (this.pad) {
+            // remove padding
+
+        }
+
+
+        if (verbose) Log.d(TAG, printData("ciphertext", ciphertext));
+        return null;
+    }
+
     private byte[] eval_lrp(byte[][] p, byte[] kp, byte[] x, boolean isFinal, boolean verbose) {
         if (verbose) Log.d(TAG, "eval_lrp with p[][] " + printData("kp", kp) + printData(" x", x) + " isFinal: " + isFinal);
         // Algorithm 3 assuming m = 4
         byte[] y = kp.clone();
-
-
-
-        return null;
+        List<Integer> nibbleList = Utils.getNibblesFromByteArray(x);
+        for (int i = 0; i < nibbleList.size(); i++) {
+            byte[] p_j = p[nibbleList.get(i)];
+            y = e(y, p_j);
+        }
+        if (isFinal) {
+            y = e(y, new byte[16]);
+        }
+        return y;
     }
 
     private byte[] e(byte[] key, byte[] data) {
@@ -402,6 +460,14 @@ public class LrpAuthentication {
         } else {
             return false;
         }
+    }
+
+    private byte[] removePadding(byte[] paddedData) {
+        // the padding in 0x80 .. 0x00..0x00...
+        // to remove we check from the end if there is an 0x80 in the byte array and remove from that position to the end
+
+
+
     }
 
     /**
