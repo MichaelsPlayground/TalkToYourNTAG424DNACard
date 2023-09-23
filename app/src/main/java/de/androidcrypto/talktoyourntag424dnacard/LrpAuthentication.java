@@ -26,9 +26,6 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-import de.androidcrypto.talktoyourntag424dnacard.ShamirSharingSecret.Scheme;
-
-import de.androidcrypto.talktoyourntag424dnacard.lrp.CMAC;
 
 /**
  * This class is running all LRP authentication commands
@@ -566,128 +563,32 @@ public class LrpAuthentication {
 
         Cipher cipher = null;
         try {
+            Log.d(TAG, "1 start cipher");
             cipher = Cipher.getInstance("AES/ECB/NoPadding");
             SecretKeySpec secretKeySpec = new SecretKeySpec(k0, "AES");
             cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec);
 
-            //MessageDigest md = CMAC.newHash(cipher);
-            generatedCmac = CMAC.sum(data, cipher, 16);
-            /*
-            CMAC cmac = new CMAC();
-            cmac.newHash(cipher);
-            generatedCmac = cmac.sum(data, cipher, 16);
 
-             */
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
 
-
-
-        /*
+        Log.d(TAG, "2 start LrpMacFunc");
+        LrpMacFunc macFunc = null;
         try {
-            CMAC cmac = new CMAC(k0);
-            cmac.update(data);
-            generatedCmac = cmac.doFinal();
-            Log.e(TAG, printData("=== kF ===", generatedCmac));
-        } catch (NoSuchAlgorithmException e) {
-            Log.e(TAG, "lrp.CMAC Exception: " + e.getMessage());
-
-            return null;
+            macFunc = new LrpMacFunc(cipher, 16);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
+        Log.d(TAG, "3 init LrpMacFunc done");
+        Log.d(TAG, printData("data", data));
+        macFunc.Write(data);
+        Log.d(TAG, "4 write LrpMacFunc data done");
+        generatedCmac = macFunc.Sum(new byte[0]);
+        Log.d(TAG, "5 sum LrpMacFunc done");
 
-         */
+        return generatedCmac;
 
-        //generatedCmac = eval_lrp(this.p, this.kp, generatedCmac, true, verbose);
-
-        if (verbose) return generatedCmac;
-
-        byte[] k1 = multiplyValues(k0, 2);
-        byte[] k2 = multiplyValues(k0, 4);
-        Log.e(TAG, printData("=== k1 ===", k1));
-        Log.e(TAG, printData("=== k2 ===", k2));
-
-        byte[] y = new byte[16];
-        byte[] xLast = new byte[0];
-        for (int i = 0; i < blockS.size(); i++) {
-            byte[] x = blockS.get(i);
-            xLast = x.clone();
-            y = xor(x, y);
-            y = eval_lrp(this.p, this.kp, y, true, verbose);
-        }
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        boolean isPadded = false;
-        if (xLast.length < AES_BLOCK_SIZE) {
-            isPadded = true;
-            baos.write((byte) 0x80); // padding
-            while (!isMultiple(baos.size(), AES_BLOCK_SIZE)) {
-                baos.write((byte) 0x00);
-            }
-        }
-        byte[] xLastPadded = baos.toByteArray();
-        Log.d(TAG, printData("xLastPadded", xLastPadded));
-
-
-
-        y = xor(xLastPadded, y);
-
-
-
-        Shamir shamir = new Shamir();
-        Shamir.Element element = new Shamir.Element(k0);
-        Log.d(TAG, "element: " + element.toString());
-        long l2 = 2;
-
-        //Log.d(TAG, element(l2).encode);
-
-
-        //LrpCmac cm = new LrpCmac()
-// K0 = evalLRP(m, {{p0, . . . , p2m−1}, k0
-//}, l, 0
-//n
-//, f inal)
-//K1 = K0 · x mod x
-//128 + x
-//7 + x
-//2 + x + 1
-//K2 = K0 · x
-//2 mod x
-//128 + x
-//7 + x
-//2 + x + 1
-        // K1 = K0 · x mod x exp128 + xexp7 + xexp2 + x + 1
-
-/*
-k0:  b'8b4895c68ceca596a6d27fd0e5690c52'
-k1:  b'16912b8d19d94b2d4da4ffa1cad21823'
-k1ElementK0:  b'8b4895c68ceca596a6d27fd0e5690c52'
-k1Element2:  b'00000000000000000000000000000002'
-k2Element4:  b'00000000000000000000000000000004'
-k2:  b'2d22571a33b2965a9b49ff4395a43046'
-k0:  b'5a10f23f7171ebaaf7d1cf461a90bb49'
-k1:  b'b421e47ee2e3d755efa39e8c35217692'
-k1ElementK0:  b'5a10f23f7171ebaaf7d1cf461a90bb49'
-k1Element2:  b'00000000000000000000000000000002'
-k2Element4:  b'00000000000000000000000000000004'
-k2:  b'6843c8fdc5c7aeabdf473d186a42eda3'
-k0:  b'957075e9bb5e6a513d8e6a0369218e3f'
-k1:  b'2ae0ebd376bcd4a27b1cd406d2431cf9'
-k1ElementK0:  b'957075e9bb5e6a513d8e6a0369218e3f'
-k1Element2:  b'00000000000000000000000000000002'
-k2Element4:  b'00000000000000000000000000000004'
-k2:  b'55c1d7a6ed79a944f639a80da48639f2'
-
- */
-
-
-        if (isPadded) {
-            y = xor(y, k2);
-        } else {
-            y = xor(y, k1);
-        }
-        byte[] result = eval_lrp(this.p, this.kp, y, true, verbose);
-        if (verbose) Log.d(TAG, "cmac " + printData("cmac", result));
-        return result;
     }
 
     public byte[] Cmac(byte[] key, byte[] msg) {

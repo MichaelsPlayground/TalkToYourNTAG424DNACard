@@ -1,4 +1,4 @@
-package de.androidcrypto.talktoyourntag424dnacard.lrp;
+package de.androidcrypto.talktoyourntag424dnacard;
 
 import android.util.Log;
 
@@ -8,10 +8,8 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 
-import de.androidcrypto.talktoyourntag424dnacard.Utils;
-
-public class MacFunc {
-    private final static String TAG = "MacFunc";
+public class LrpMacFunc {
+    private final static String TAG = "LrpMacFunc";
     private Cipher cipher;
     private byte[] buf;
     private int off;
@@ -21,16 +19,21 @@ public class MacFunc {
     private static final byte p64 = (byte)0x1b;
     private static final String errInvalidTagSize = "tags size must between 1 and the cipher's block size";
 
-    public MacFunc(Cipher cipher, byte[] k0, byte[] k1, int tagsize) {
+    public LrpMacFunc(Cipher cipher, byte[] k0, byte[] k1, byte[] buf, int tagsize) {
+        Log.d(TAG, "init MacFund with k0/1/buf");
+        Log.d(TAG, Utils.printData("k0", k0));
+        Log.d(TAG, Utils.printData("k1", k1));
+        Log.d(TAG, Utils.printData("buf", buf));
+        Log.d(TAG, "tagSize: " + tagsize);
         this.cipher = cipher;
-        this.buf = new byte[cipher.getBlockSize()];
+        this.buf = buf;
         this.off = 0;
         this.k0 = k0;
         this.k1 = k1;
         this.tagsize = tagsize;
     }
 
-    public MacFunc(Cipher cipher, int tagsize) throws Exception {
+    public LrpMacFunc(Cipher cipher, int tagsize) throws Exception {
         Log.d(TAG, "init MacFund with key");
         this.cipher = cipher;
         int blocksize = cipher.getBlockSize();
@@ -54,7 +57,16 @@ public class MacFunc {
         Log.d(TAG, "before calling new MacFunc");
         Log.d(TAG, Utils.printData("k0", k0));
         Log.d(TAG, Utils.printData("k1", k1));
-        new CMAC.MacFunc(cipher, k0, k1, buf, tagsize);
+        buf = new byte[tagsize];
+
+        this.cipher = cipher;
+        this.buf = buf;
+        this.off = 0;
+        this.k0 = k0;
+        this.k1 = k1;
+        this.tagsize = tagsize;
+
+        //new LrpMacFunc(cipher, k0, k1, buf, tagsize);
     }
 
     private void shift(byte[] dest, byte[] src) {
@@ -85,7 +97,10 @@ public class MacFunc {
         int bs = BlockSize();
         int n = msg.length;
 
+        Log.d(TAG, "Write " + Utils.printData("msg", msg) + " bs: " + bs + " n: " + n);
+        Log.d(TAG, "Write " + Utils.printData("k0", k0) + Utils.printData(" k1", k1));
         if (off > 0) {
+            Log.d(TAG, "off > 0");
             int dif = bs - off;
             if (n > dif) {
                 xor(buf, off, msg, 0, dif);
@@ -99,7 +114,8 @@ public class MacFunc {
                 return n;
             }
         }
-
+        Log.d(TAG, "off !> 0");
+        buf = new byte[msg.length];
         if (msg.length > bs) {
             int length = msg.length;
             int nn = length & (~(bs - 1));
@@ -123,13 +139,16 @@ public class MacFunc {
     }
 
     public byte[] Sum(byte[] b) {
+        Log.d(TAG, "Sum " + Utils.printData("b", b));
         int blocksize = cipher.getBlockSize();
 
         byte[] hash = new byte[blocksize];
 
         if (off < blocksize) {
+            Log.d(TAG, "off < blocksize " + Utils.printData("k1", k1));
             System.arraycopy(k1, 0, hash, 0, k1.length);
         } else {
+            Log.d(TAG, "off !< blocksize " + Utils.printData("k0", k0));
             System.arraycopy(k0, 0, hash, 0, k0.length);
         }
 
@@ -147,6 +166,8 @@ public class MacFunc {
     }
 
     private void xor(byte[] dest, int destOffset, byte[] src, int srcOffset, int length) {
+        Log.d(TAG, "xor " + Utils.printData("dest", dest) + Utils.printData(" src", src));
+        Log.d(TAG, "xor destOffset: " + destOffset + " srcOffset: " + srcOffset + " length: " + length);
         for (int i = 0; i < length; i++) {
             dest[destOffset + i] ^= src[srcOffset + i];
         }
