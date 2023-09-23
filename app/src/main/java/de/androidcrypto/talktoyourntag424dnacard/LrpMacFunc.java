@@ -155,10 +155,13 @@ public class LrpMacFunc {
         xor(hash, 0, buf, 0, buf.length);
         if (off < blocksize) {
             hash[off] ^= 0x80;
+            Log.d(TAG, "off < blocksize ");
         }
 
         //cipher.Encrypt(hash, hash);
+        Log.d(TAG, "Sum before last encrypt " + Utils.printData("hash", hash));
         hash = encrypt(cipher, hash);
+        Log.d(TAG, "Sum after  last encrypt " + Utils.printData("hash", hash));
         byte[] result = new byte[b.length + tagsize];
         System.arraycopy(b, 0, result, 0, b.length);
         System.arraycopy(hash, 0, result, b.length, tagsize);

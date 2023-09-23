@@ -224,7 +224,13 @@ public class LrpAuthentication {
 
     private boolean test_cmac(boolean verbose) {
         if (verbose) Log.d(TAG, "test_cmac");
-        byte[] key1 = Utils.hexStringToByteArray("8195088CE6C393708EBBE6C7914ECB0B");
+        //byte[] key1 = Utils.hexStringToByteArray("8195088CE6C393708EBBE6C7914ECB0B");
+
+        // this is key index 0 from
+        // func (lrp LrpMultiCipher) Cipher(idx int) *LrpCipher
+        // ae4ae8cfde1c44153c0e3020cb75896c
+        byte[] key1 = Utils.hexStringToByteArray("ae4ae8cfde1c44153c0e3020cb75896c");
+
         byte[] input1 = Utils.hexStringToByteArray("BBD5B85772C7");
         byte[] cmacExp1 = Utils.hexStringToByteArray("AD8595E0B49C5C0DB18E77355F5AAFF6");
         byte[] key2 = Utils.hexStringToByteArray("E2F84A0B0AF40EFEB3EEA215A436605C");
@@ -239,9 +245,9 @@ public class LrpAuthentication {
         byte[] cmac1 = cmac(input1, verbose);
         if (!compareTestValues(cmac1, cmacExp1, "cmac1", verbose)) {
             Log.d(TAG, "1 FAILURE");
-            return false;
+            //return false;
         }
-
+/*
         initSuccess = _init(key2, 0, new byte[16], true, true); // todo check on counter 16 byte length
         if (verbose) Log.d(TAG, "init library success");
         byte[] cmac2 = cmac(input2, verbose);
@@ -257,7 +263,12 @@ public class LrpAuthentication {
             Log.d(TAG, "1 FAILURE");
             //return false;
         }
-
+*/
+        byte[] cmac1b = cmac(key1, input1, verbose);
+        if (!compareTestValues(cmac1b, cmacExp1, "cmac1b", verbose)) {
+            Log.d(TAG, "1b FAILURE");
+            return false;
+        }
         return true;
     }
 
@@ -569,6 +580,52 @@ public class LrpAuthentication {
             cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec);
 
 
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        Log.d(TAG, "2 start LrpMacFunc");
+        LrpMacFunc macFunc = null;
+        try {
+            macFunc = new LrpMacFunc(cipher, 16);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        Log.d(TAG, "3 init LrpMacFunc done");
+        Log.d(TAG, printData("data", data));
+        macFunc.Write(data);
+        Log.d(TAG, "4 write LrpMacFunc data done");
+        generatedCmac = macFunc.Sum(new byte[0]);
+        Log.d(TAG, "5 sum LrpMacFunc done");
+
+        return generatedCmac;
+
+    }
+
+    private byte[] cmac(byte[] key, byte[] data, boolean verbose) {
+        /**
+         * Calculate CMAC_LRP
+         * Algorithm: 6
+         * param data: message to be authenticated
+         * return: CMAC result
+         */
+        // todo check data multiple of 16
+        if ((data == null) || (data.length < 1)) {
+            Log.e(TAG, "cmac: data is NULL or of length 0, aborted");
+            return null;
+        }
+
+        Log.e(TAG, printData("=== key ===", key));
+
+        // return this value:
+        byte[] generatedCmac;
+
+        Cipher cipher = null;
+        try {
+            Log.d(TAG, "1 start cipher");
+            cipher = Cipher.getInstance("AES/ECB/NoPadding");
+            SecretKeySpec secretKeySpec = new SecretKeySpec(key, "AES");
+            cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
