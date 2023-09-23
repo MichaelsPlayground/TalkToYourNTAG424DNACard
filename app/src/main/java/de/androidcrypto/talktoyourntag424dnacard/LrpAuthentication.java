@@ -229,7 +229,7 @@ public class LrpAuthentication {
         // this is key index 0 from
         // func (lrp LrpMultiCipher) Cipher(idx int) *LrpCipher
         // ae4ae8cfde1c44153c0e3020cb75896c
-        byte[] key1 = Utils.hexStringToByteArray("ae4ae8cfde1c44153c0e3020cb75896c");
+        byte[] key1 = Utils.hexStringToByteArray("d93556f596e4c42100a6257182a30f1f");
 
         byte[] input1 = Utils.hexStringToByteArray("BBD5B85772C7");
         byte[] cmacExp1 = Utils.hexStringToByteArray("AD8595E0B49C5C0DB18E77355F5AAFF6");
@@ -634,6 +634,7 @@ public class LrpAuthentication {
         LrpMacFunc macFunc = null;
         try {
             macFunc = new LrpMacFunc(cipher, 16);
+            //macFunc = new LrpMacFunc(key, 16);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

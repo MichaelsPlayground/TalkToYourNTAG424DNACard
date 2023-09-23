@@ -2,11 +2,16 @@ package de.androidcrypto.talktoyourntag424dnacard;
 
 import android.util.Log;
 
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 public class LrpMacFunc {
     private final static String TAG = "LrpMacFunc";
@@ -34,7 +39,7 @@ public class LrpMacFunc {
     }
 
     public LrpMacFunc(Cipher cipher, int tagsize) throws Exception {
-        Log.d(TAG, "init MacFund with key");
+        Log.d(TAG, "init MacFund with Cipher");
         this.cipher = cipher;
         int blocksize = cipher.getBlockSize();
 
@@ -45,9 +50,60 @@ public class LrpMacFunc {
         byte[] k0 = new byte[blocksize];
         byte[] k1 = new byte[blocksize];
         byte[] buf = new byte[blocksize];
-
+        Log.d(TAG, Utils.printData("  k0", k0));
         k0 = cipher.doFinal(k0);
         Log.d(TAG, Utils.printData("A k0", k0));
+        shift(k0, k0);
+        Log.d(TAG, Utils.printData("B k0", k0));
+        k0[blocksize - 1] ^= (byte) (p64 & 0xFF);
+
+        shift(k1, k0);
+        k1[blocksize - 1] ^= (byte) (p64 & 0xFF);
+        Log.d(TAG, "before calling new MacFunc");
+        Log.d(TAG, Utils.printData("k0", k0));
+        Log.d(TAG, Utils.printData("k1", k1));
+        buf = new byte[tagsize];
+
+        this.cipher = cipher;
+        this.buf = buf;
+        this.off = 0;
+        this.k0 = k0;
+        this.k1 = k1;
+        this.tagsize = tagsize;
+
+        //new LrpMacFunc(cipher, k0, k1, buf, tagsize);
+    }
+
+    public LrpMacFunc(byte[] key, int tagsize) throws Exception {
+        Log.d(TAG, "init MacFund with key");
+        Log.d(TAG, Utils.printData("key", key) + " tagSize: " + 16);
+        Cipher cipher = null;
+        try {
+            Log.d(TAG, "1 start cipher");
+            cipher = Cipher.getInstance("AES/ECB/NoPadding");
+            SecretKeySpec secretKeySpec = new SecretKeySpec(key, "AES");
+            cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec);
+        } catch (Exception e) {
+            Log.e(TAG, "Exception: " + e.getMessage());
+            return;
+        }
+
+        this.cipher = cipher;
+        int blocksize = cipher.getBlockSize();
+
+        if (tagsize <= 0 || tagsize > blocksize) {
+            throw new Exception(errInvalidTagSize);
+        }
+
+        byte[] k0 = new byte[blocksize];
+        byte[] k1 = new byte[blocksize];
+        byte[] buf = new byte[blocksize];
+        Log.d(TAG, Utils.printData("  k0", k0));
+        //k0 = cipher.doFinal(k0);
+        k0 = e(key, k0);
+        Log.d(TAG, Utils.printData("A k0", k0));
+        // found:   c41e9782c89d2a650b8447e1190c1b88
+        // expected 8b4895c68ceca596a6d27fd0e5690c52
         shift(k0, k0);
         Log.d(TAG, Utils.printData("B k0", k0));
         k0[blocksize - 1] ^= (byte) (p64 & 0xFF);
@@ -182,5 +238,22 @@ public class LrpMacFunc {
         } catch (BadPaddingException | IllegalBlockSizeException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private byte[] e(byte[] key, byte[] data) {
+        // simple AES ECB encryption
+        // todo check data length
+        byte[] cipherText = null;
+        try {
+            SecretKey sks = new SecretKeySpec(key, "AES");
+            Cipher cipher = Cipher.getInstance("AES/ECB/NoPadding");
+            cipher.init(Cipher.ENCRYPT_MODE, sks);
+            cipherText = cipher.doFinal(data);
+        } catch (NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException |
+                 BadPaddingException | InvalidKeyException e) {
+            Log.e(TAG, "e Exception: " + e.getMessage());
+            return null;
+        }
+        return cipherText;
     }
 }
