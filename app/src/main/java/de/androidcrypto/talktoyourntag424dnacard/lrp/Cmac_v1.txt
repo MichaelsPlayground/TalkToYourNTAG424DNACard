@@ -1,0 +1,273 @@
+package de.androidcrypto.talktoyourntag424dnacard.lrp;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.ShortBufferException;
+import javax.crypto.spec.SecretKeySpec;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+
+public class Cmac {
+
+    private static final byte p64 = 0x1b;
+    private static final byte p128 = (byte) 0x87;
+    private static final byte p256 = (byte) 0x425;
+    private static final byte p512 = (byte) 0x125;
+    private static final byte p1024 = 0x43;
+
+    private static final String errUnsupportedCipher = "cipher block size not supported";
+    private static final String errInvalidTagSize = "tags size must between 1 and the cipher's block size";
+
+    public static byte[] sum(byte[] msg, Cipher c, int tagsize) throws Exception {
+        MessageDigest h = newWithTagSize(c, tagsize);
+        h.update(msg);
+        return h.digest();
+    }
+
+    public static boolean verify(byte[] mac, byte[] msg, Cipher c, int tagsize) throws Exception {
+        byte[] sum = sum(msg, c, tagsize);
+        return Arrays.equals(mac, sum);
+    }
+
+    public static MessageDigest newHash(Cipher c) throws Exception {
+        return newWithTagSize(c, c.getBlockSize());
+    }
+
+    public static MessageDigest newWithTagSize(Cipher c, int tagsize) throws Exception {
+        int blocksize = c.getBlockSize();
+
+        if (tagsize <= 0 || tagsize > blocksize) {
+            throw new Exception(errInvalidTagSize);
+        }
+
+        byte[] k0 = new byte[blocksize];
+        byte[] k1 = new byte[blocksize];
+        byte[] buf = new byte[blocksize];
+
+        c.doFinal(k0, 0);
+        shift(k0, k0);
+        k0[blocksize - 1] ^= (byte) (p64 & 0xFF);
+
+        shift(k1, k0);
+        k1[blocksize - 1] ^= (byte) (p64 & 0xFF);
+
+        return new MacFunc(c, k0, k1, buf, tagsize);
+    }
+
+    private static void shift(byte[] dest, byte[] src) {
+        int carry = 0;
+        for (int i = 0; i < dest.length; i++) {
+            int b = src[i] & 0xFF;
+            dest[i] = (byte) ((b << 1) | carry);
+            carry = (b >>> 7) & 1;
+        }
+    }
+
+    private static class MacFunc extends MessageDigest {
+
+        private final Cipher cipher;
+        private final byte[] k0;
+        private final byte[] k1;
+        private final byte[] buf;
+        private int off;
+        private final int tagsize;
+
+        protected MacFunc(Cipher cipher, byte[] k0, byte[] k1, byte[] buf, int tagsize) {
+            super("CMAC");
+            this.cipher = cipher;
+            this.k0 = k0;
+            this.k1 = k1;
+            this.buf = buf;
+            this.off = 0;
+            this.tagsize = tagsize;
+        }
+
+        @Override
+        protected void engineUpdate(byte input) {
+            buf[off++] = input;
+            if (off == buf.length) {
+                cipher.update(buf, 0, buf.length);
+                off = 0;
+            }
+        }
+
+        @Override
+        protected void engineUpdate(byte[] input, int offset, int len) {
+            while (len > 0) {
+                int n = Math.min(len, buf.length - off);
+                System.arraycopy(input, offset, buf, off, n);
+                off += n;
+                offset += n;
+                len -= n;
+                if (off == buf.length) {
+                    cipher.update(buf, 0, buf.length);
+                    off = 0;
+                }
+            }
+        }
+
+        @Override
+        protected byte[] engineDigest() {
+            byte[] result = new byte[tagsize];
+            if (off == 0) {
+                cipher.update(k1, 0, k1.length);
+            } else {
+                cipher.update(k0, 0, k0.length);
+                cipher.update(k1, 0, k1.length);
+            }
+            try {
+                cipher.doFinal(result, 0);
+            } catch (BadPaddingException | IllegalBlockSizeException | ShortBufferException e) {
+                //throw new RuntimeException(e);
+                System.out.println("*** Exception: " + e.getMessage());
+                e.printStackTrace();
+                return null;
+            }
+            return Arrays.copyOf(result, tagsize);
+        }
+
+        @Override
+        protected void engineReset() {
+            off = 0;
+            Arrays.fill(buf, (byte) 0);
+        }
+    }
+}
+
+class MacFunc {
+    private Cipher cipher;
+    private byte[] buf;
+    private int off;
+    private byte[] k0;
+    private byte[] k1;
+    private int tagsize;
+
+    public MacFunc(Cipher cipher, byte[] k0, byte[] k1, int tagsize) {
+        this.cipher = cipher;
+        this.buf = new byte[cipher.getBlockSize()];
+        this.off = 0;
+        this.k0 = k0;
+        this.k1 = k1;
+        this.tagsize = tagsize;
+    }
+
+    public int Size() {
+        return cipher.getBlockSize();
+    }
+
+    public int BlockSize() {
+        return cipher.getBlockSize();
+    }
+
+    public void Reset() {
+        for (int i = 0; i < buf.length; i++) {
+            buf[i] = 0;
+        }
+        off = 0;
+    }
+/*
+    public int Write(byte[] msg) {
+        int bs = BlockSize();
+        int n = msg.length;
+
+        if (off > 0) {
+            int dif = bs - off;
+            if (n > dif) {
+                xor(buf, off, msg, 0, dif);
+                msg = Arrays.copyOfRange(msg, dif, msg.length);
+                cipher.Encrypt(buf, buf);
+                off = 0;
+            } else {
+                xor(buf, off, msg, 0, n);
+                off += n;
+                return n;
+            }
+        }
+
+        if (msg.length > bs) {
+            int length = msg.length;
+            int nn = length & (~(bs - 1));
+            if (length == nn) {
+                nn -= bs;
+            }
+            for (int i = 0; i < nn; i += bs) {
+                xor(buf, 0, msg, i, i + bs);
+                cipher.Encrypt(buf, buf);
+            }
+            msg = Arrays.copyOfRange(msg, nn, msg.length);
+        }
+
+        if (msg.length > 0) {
+            xor(buf, off, msg, 0, msg.length);
+            off += msg.length;
+        }
+
+        return n;
+    }
+
+ */
+/*
+    public byte[] Sum(byte[] b) {
+        int blocksize = cipher.getBlockSize();
+
+        byte[] hash = new byte[blocksize];
+
+        if (off < blocksize) {
+            System.arraycopy(k1, 0, hash, 0, k1.length);
+        } else {
+            System.arraycopy(k0, 0, hash, 0, k0.length);
+        }
+
+        xor(hash, 0, buf, 0, buf.length);
+        if (off < blocksize) {
+            hash[off] ^= 0x80;
+        }
+
+        cipher.Encrypt(hash, hash);
+        byte[] result = new byte[b.length + tagsize];
+        System.arraycopy(b, 0, result, 0, b.length);
+        System.arraycopy(hash, 0, result, b.length, tagsize);
+        return result;
+    }
+
+ */
+
+    private void xor(byte[] dest, int destOffset, byte[] src, int srcOffset, int length) {
+        for (int i = 0; i < length; i++) {
+            dest[destOffset + i] ^= src[srcOffset + i];
+        }
+    }
+//}
+
+//public class Cmac {
+    /**
+     * Shifts the elements of the source byte array to the left by 1 bit and stores the result in the destination byte array.
+     * The most significant bit of each element is stored in the least significant bit of the next element.
+     * The least significant bit of the last element is stored in the return value.
+     *
+     * @param dst the destination byte array
+     * @param src the source byte array
+     * @return the least significant bit of the last element of the source byte array
+     */
+    public static int shift(byte[] dst, byte[] src) {
+        byte b = 0;
+        byte bit;
+        for (int i = src.length - 1; i >= 0; i--) {
+            bit = (byte) (src[i] >> 7);
+            dst[i] = (byte) ((src[i] << 1) | b);
+            b = bit;
+        }
+        return b;
+    }
+
+    public static void main(String[] args) {
+        // Test the shift method
+        byte[] src = {(byte) 0b11001010, (byte) 0b10100101, 0b01011010};
+        byte[] dst = new byte[src.length];
+        int result = shift(dst, src);
+        System.out.println("Result: " + result);
+        System.out.println("Destination array: " + Arrays.toString(dst));
+    }
+}

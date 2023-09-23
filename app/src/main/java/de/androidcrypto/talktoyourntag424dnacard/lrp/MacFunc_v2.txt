@@ -1,0 +1,80 @@
+package de.androidcrypto.talktoyourntag424dnacard.lrp;
+
+import java.security.MessageDigest;
+import java.util.Arrays;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.ShortBufferException;
+
+public class MacFunc extends MessageDigest {
+
+    private final Cipher cipher;
+    private final byte[] k0;
+    private final byte[] k1;
+    private final byte[] buf;
+    private int off;
+    private final int tagsize;
+
+    public MacFunc(Cipher cipher, byte[] k0, byte[] k1, byte[] buf, int tagsize) {
+        super("CMAC");
+        this.cipher = cipher;
+        this.k0 = k0;
+        this.k1 = k1;
+        this.buf = buf;
+        this.off = 0;
+        this.tagsize = tagsize;
+    }
+
+    @Override
+    protected void engineUpdate(byte input) {
+        buf[off++] = input;
+        if (off == buf.length) {
+            cipher.update(buf, 0, buf.length);
+            off = 0;
+        }
+    }
+
+    @Override
+    protected void engineUpdate(byte[] input, int offset, int len) {
+        while (len > 0) {
+            int n = Math.min(len, buf.length - off);
+            System.arraycopy(input, offset, buf, off, n);
+            off += n;
+            offset += n;
+            len -= n;
+            if (off == buf.length) {
+                cipher.update(buf, 0, buf.length);
+                off = 0;
+            }
+        }
+    }
+
+    @Override
+    protected byte[] engineDigest() {
+        byte[] result = new byte[tagsize];
+        if (off == 0) {
+            cipher.update(k1, 0, k1.length);
+        } else {
+            cipher.update(k0, 0, k0.length);
+            cipher.update(k1, 0, k1.length);
+        }
+        try {
+            cipher.doFinal(result, 0);
+        } catch (BadPaddingException | ShortBufferException | IllegalBlockSizeException e) {
+            System.out.println("Exception " + e.getMessage());
+            e.printStackTrace();
+            //throw new RuntimeException(e);
+            return null;
+        }
+        return Arrays.copyOf(result, tagsize);
+    }
+
+    @Override
+    protected void engineReset() {
+        off = 0;
+        Arrays.fill(buf, (byte) 0);
+    }
+}
+

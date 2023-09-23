@@ -1,0 +1,65 @@
+package de.androidcrypto.talktoyourntag424dnacard.lrp;
+
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+
+public class CMAC {
+
+    private final byte p64 = 0x1b;
+    private final byte p128 = (byte)0x87;
+    private final byte p256 = (byte)0x425;
+    private final byte p512 = (byte)0x125;
+    private final byte p1024 = 0x43;
+
+    private final String errUnsupportedCipher = "cipher block size not supported";
+    private final String errInvalidTagSize = "tags size must between 1 and the cipher's block size";
+
+    public byte[] sum(byte[] msg, Cipher c, int tagsize) throws Exception {
+        MessageDigest h = newWithTagSize(c, tagsize);
+        h.update(msg);
+        return h.digest();
+    }
+
+    public boolean verify(byte[] mac, byte[] msg, Cipher c, int tagsize) throws Exception {
+        byte[] sum = sum(msg, c, tagsize);
+        return Arrays.equals(mac, sum);
+    }
+
+    public MessageDigest newHash(Cipher c) throws Exception {
+        return newWithTagSize(c, c.getBlockSize());
+    }
+
+    public MessageDigest newWithTagSize(Cipher c, int tagsize) throws Exception {
+        int blocksize = c.getBlockSize();
+
+        if (tagsize <= 0 || tagsize > blocksize) {
+            throw new Exception(errInvalidTagSize);
+        }
+
+        byte[] k0 = new byte[blocksize];
+        byte[] k1 = new byte[blocksize];
+        byte[] buf = new byte[blocksize];
+
+        c.doFinal(k0, 0);
+        shift(k0, k0);
+        k0[blocksize - 1] ^= (byte) (p64 & 0xFF);
+
+        shift(k1, k0);
+        k1[blocksize - 1] ^= (byte) (p64 & 0xFF);
+        return new MacFunc(c, k0, k1, buf, tagsize);
+        //return new MacFunc(c, k0, k1, buf, tagsize);
+    }
+
+    private void shift(byte[] dest, byte[] src) {
+        int carry = 0;
+        for (int i = 0; i < dest.length; i++) {
+            int b = src[i] & 0xFF;
+            dest[i] = (byte) ((b << 1) | carry);
+            carry = (b >>> 7) & 1;
+        }
+    }
+
+}
