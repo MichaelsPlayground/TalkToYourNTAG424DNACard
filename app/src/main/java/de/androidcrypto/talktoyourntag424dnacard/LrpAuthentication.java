@@ -224,12 +224,37 @@ public class LrpAuthentication {
 
     private boolean test_cmac(boolean verbose) {
         if (verbose) Log.d(TAG, "test_cmac");
-        //byte[] key1 = Utils.hexStringToByteArray("8195088CE6C393708EBBE6C7914ECB0B");
+        byte[] key1 = Utils.hexStringToByteArray("8195088CE6C393708EBBE6C7914ECB0B");
+        byte[] data = Utils.hexStringToByteArray("bbd5b85772c7");
 
+        calculateCmac(key1, data, true);
+
+/*
+
+        byte[] counter = new byte[4]; // 4 or 16 ?
+        boolean success =_init(key1, 1, new byte[4], true, false);
+        if (verbose) {
+            Log.d(TAG, printData("kp 1", kp));
+        }
+        success =_init(key1, 0, new byte[4], true, false);
+        if (verbose) {
+            Log.d(TAG, printData("kp 0", kp));
+        }
+
+        byte[] eval_lrp_result = eval_lrp(this.p, this.kp, new byte[16], true, true);
+        if (verbose) {
+            Log.d(TAG, printData("eval_lrp_result", eval_lrp_result));
+        }
+
+  */
+        //private byte[] eval_lrp(byte[][] p, byte[] kp, byte[] x, boolean isFinal, boolean verbose) {
+
+
+/*
         // this is key index 0 from
         // func (lrp LrpMultiCipher) Cipher(idx int) *LrpCipher
         // ae4ae8cfde1c44153c0e3020cb75896c
-        byte[] key1 = Utils.hexStringToByteArray("d93556f596e4c42100a6257182a30f1f");
+        //byte[] key1b = Utils.hexStringToByteArray("d93556f596e4c42100a6257182a30f1f");
 
         byte[] input1 = Utils.hexStringToByteArray("BBD5B85772C7");
         byte[] cmacExp1 = Utils.hexStringToByteArray("AD8595E0B49C5C0DB18E77355F5AAFF6");
@@ -240,13 +265,15 @@ public class LrpAuthentication {
         byte[] input3 = Utils.hexStringToByteArray("A4434D740C2CB665FE5396959189383F");
         byte[] cmacExp3 = Utils.hexStringToByteArray("8B43ADF767E46B692E8F24E837CB5EFC");
 
-        boolean initSuccess = _init(key1, 0, new byte[16], true, true); // todo check on counter 16 byte length
+        boolean initSuccess = _init(key1, 0, new byte[4], true, true); // todo check on counter 16 byte length
         if (verbose) Log.d(TAG, "init library success");
-        byte[] cmac1 = cmac(input1, verbose);
+        byte[] cmac1 = calculateCmac(key1, input1, verbose);
         if (!compareTestValues(cmac1, cmacExp1, "cmac1", verbose)) {
             Log.d(TAG, "1 FAILURE");
             //return false;
         }
+
+ */
 /*
         initSuccess = _init(key2, 0, new byte[16], true, true); // todo check on counter 16 byte length
         if (verbose) Log.d(TAG, "init library success");
@@ -264,11 +291,14 @@ public class LrpAuthentication {
             //return false;
         }
 */
+        /*
         byte[] cmac1b = cmac(key1, input1, verbose);
         if (!compareTestValues(cmac1b, cmacExp1, "cmac1b", verbose)) {
             Log.d(TAG, "1b FAILURE");
             return false;
         }
+
+         */
         return true;
     }
 
@@ -279,10 +309,11 @@ public class LrpAuthentication {
     private byte[] r; // param r: IV/counter value (default: all zeros)
     private boolean pad; // param pad: whether to use bit padding or no (default: true)
     private byte[][] p;
-    private byte[][] ku;
+    private byte[][] ku; // updated keys
     private byte[] kp;
 
     private final int AES_BLOCK_SIZE = 16;
+    private static final byte P64 = (byte)0x1b;
 
     private boolean _init(byte[] key, int u, byte[] r, boolean pad, boolean verbose) {
         /*
@@ -498,6 +529,7 @@ public class LrpAuthentication {
         return plaintext;
     }
 
+    // x is the 16 byte long counter !
     private byte[] eval_lrp(byte[][] p, byte[] kp, byte[] x, boolean isFinal, boolean verbose) {
         if (verbose)
             Log.d(TAG, "eval_lrp with p[][] " + printData("kp", kp) + printData(" x", x) + " isFinal: " + isFinal);
@@ -602,7 +634,219 @@ public class LrpAuthentication {
 
     }
 
-    private byte[] cmac(byte[] key, byte[] data, boolean verbose) {
+    private byte[] calculateCmac(byte[] key, byte[] data, boolean verbose) {
+        /**
+         * Calculate CMAC_LRP
+         * Algorithm: 6
+         * param data: message to be authenticated
+         * return: CMAC result
+         */
+        if (verbose) {
+            Log.d(TAG, "calculateCmac");
+            Log.d(TAG, printData("key", key));
+            Log.d(TAG, printData("data", data));
+        }
+
+        // todo check data multiple of 16
+        if ((data == null) || (data.length < 1)) {
+            Log.e(TAG, "cmac: data is NULL or of length 0, aborted");
+            return null;
+        }
+
+        Log.e(TAG, printData("=== key ===", key));
+
+        // return this value:
+        byte[] generatedCmac;
+
+        byte[] k0 = new byte[AES_BLOCK_SIZE];
+        byte[] k1 = new byte[AES_BLOCK_SIZE];
+        byte[] buf = new byte[AES_BLOCK_SIZE];
+
+        byte[] counter = new byte[4]; // 4 or 16 ?
+        boolean success =_init(key, 0, counter, true, false);
+        if (verbose) Log.d(TAG, printData("kp 0", kp));
+        byte[] startValue = new byte[16];
+        k0 = eval_lrp(this.p, this.kp, startValue, true, false);
+        if (verbose) Log.d(TAG, printData("k0", k0));
+
+        //int v = shift(k0, k0, verbose);
+        int v = shift3(k0, k0);
+        if (verbose) {
+            Log.d(TAG, "v 3: " + v + Utils.printData(" k0", k0));
+        }
+        final byte P87 = (byte) 0x87;
+        if (v == 1) {
+            /*
+            if (verbose) Log.d(TAG, "P87: " + Utils.byteToHex(P87));
+            byte valO = k0[AES_BLOCK_SIZE - 1];
+            if (verbose) Log.d(TAG, "valO: " + Utils.byteToHex(valO));
+            byte valN = valO;
+            valN ^= P87;
+            if (verbose) Log.d(TAG, "valN: " + Utils.byteToHex(valN));
+            k0[AES_BLOCK_SIZE - 1] = valN;
+            */
+            k0[AES_BLOCK_SIZE - 1] ^= P87;
+        } else {
+            k0[AES_BLOCK_SIZE - 1] ^= (byte) (0x00);
+        }
+        //k0[AES_BLOCK_SIZE - 1] ^= (byte) (P64 & 0xFF);
+        if (verbose) Log.d(TAG, printData("k0 after AES_BLOCK", k0));
+        // is        16912b8d19d94b2d4da4ffa1cad218bf
+        // should be 16912b8d19d94b2d4da4ffa1cad21823
+
+        //v = shift(k1, k0, verbose);
+        v = shift3(k1, k0);
+        if (verbose) {
+            Log.d(TAG, "v3: " + v + Utils.printData(" k1", k1));
+        }
+        //k1[AES_BLOCK_SIZE - 1] ^= (byte) (P64 & 0xFF);
+        if (v == 1) {
+            /*
+            if (verbose) Log.d(TAG, "P87: " + Utils.byteToHex(P87));
+            byte valO = k0[AES_BLOCK_SIZE - 1];
+            if (verbose) Log.d(TAG, "valO: " + Utils.byteToHex(valO));
+            byte valN = valO;
+            valN ^= P87;
+            if (verbose) Log.d(TAG, "valN: " + Utils.byteToHex(valN));
+            k0[AES_BLOCK_SIZE - 1] = valN;
+            */
+            k1[AES_BLOCK_SIZE - 1] ^= P87;
+        } else {
+            k1[AES_BLOCK_SIZE - 1] ^= (byte) (0x00);
+        }
+
+        if (verbose) Log.d(TAG, printData("k1 after AES_BLOCK", k1));
+        buf = new byte[AES_BLOCK_SIZE];
+
+        if (verbose) {
+            Log.d(TAG, "before calling new MacFunc");
+            Log.d(TAG, Utils.printData("k0", k0));
+            Log.d(TAG, Utils.printData("k1", k1));
+            Log.d(TAG, Utils.printData("buf", buf));
+        }
+
+        /*
+        this.cipher = cipher;
+        this.buf = buf;
+        this.off = 0;
+        this.k0 = k0;
+        this.k1 = k1;
+        this.tagsize = tagsize;
+        */
+
+
+
+
+        generatedCmac = new byte[16];
+        return generatedCmac;
+    }
+
+    public int shift3(byte[] dst, byte[] src) {
+        System.out.println("## CMAC shift");
+        System.out.println("dst: " + Utils.printData("dst", dst));
+        System.out.println("src: " + Utils.printData("src", src));
+
+        int b = 0;
+        int bit;
+        for (int i = src.length - 1; i >= 0; i--) {
+            bit = (src[i] & 0xFF) >>> 7;
+            dst[i] = (byte) (((src[i] & 0xFF) << 1) | b);
+            b = bit;
+        }
+
+        System.out.println("returns: " + (b & 0xFF));
+        System.out.println("dst: " + Utils.printData("dst", dst));
+
+        return b & 0xFF;
+    }
+
+    public int shift(byte[] dst, byte[] src, boolean verbose) {
+        System.out.println("## CMAC shift");
+        System.out.println("dst: " + Utils.printData("dst", dst));
+        System.out.println("src: " + Utils.printData("src", src));
+
+        byte b = (0x00), bit;
+        for (int i = src.length - 1; i >= 0; i--) {
+            bit = (byte) (src[i] >> 7);
+            dst[i] = (byte) ((src[i] << 1) | b);
+            b = bit;
+        }
+        System.out.println("returns: " + b);
+        System.out.println("dst: " + Utils.printData("dst", dst));
+        return b;
+    }
+
+
+    public int shift2(byte[] dst, byte[] src) {
+        Log.d(TAG, "shift" + printData(" dst", dst) + printData(" src", src));
+        byte b = 0;
+        byte bit;
+        for (int i = src.length - 1; i >= 0; i--) {
+            bit = (byte) (src[i] >> 7);
+            dst[i] = (byte) ((src[i] << 1) | b);
+            b = bit;
+        }
+        Log.d(TAG, printData("dst", dst));
+        Log.d(TAG, "result: " + (b & 0xFF));
+
+        return b & 0xFF; // Ensure the return value is positive
+    }
+
+
+    private void shiftOld(byte[] dest, byte[] src) {
+        int carry = 0;
+        for (int i = 0; i < dest.length; i++) {
+            int b = src[i] & 0xFF;
+            dest[i] = (byte) ((b << 1) | carry);
+            carry = (b >>> 7) & 1;
+        }
+    }
+
+/*
+import java.util.Arrays;
+
+public class CMACShift {
+    public static int shift(byte[] dst, byte[] src) {
+        System.out.println("## CMAC shift");
+        System.out.println("dst: " + bytesToHex(dst));
+        System.out.println("src: " + bytesToHex(src));
+
+        byte b = 0;
+        byte bit;
+        for (int i = src.length - 1; i >= 0; i--) {
+            bit = (byte) (src[i] >> 7);
+            dst[i] = (byte) ((src[i] << 1) | b);
+            b = bit;
+        }
+
+        System.out.println("returns: " + b);
+        System.out.println("dst: " + bytesToHex(dst));
+
+        return b & 0xFF; // Ensure the return value is positive
+    }
+
+    public static String bytesToHex(byte[] bytes) {
+        StringBuilder hexStringBuilder = new StringBuilder();
+        for (byte b : bytes) {
+            hexStringBuilder.append(String.format("%02X", b));
+        }
+        return hexStringBuilder.toString();
+    }
+
+    public static void main(String[] args) {
+        byte[] dst = new byte[16];
+    byte[] src = new byte[16];
+    int result = shift(dst, src);
+        System.out.println("Result: " + result);
+}
+}
+
+*/
+
+
+
+
+    private byte[] cmacOrg(byte[] key, byte[] data, boolean verbose) {
         /**
          * Calculate CMAC_LRP
          * Algorithm: 6
