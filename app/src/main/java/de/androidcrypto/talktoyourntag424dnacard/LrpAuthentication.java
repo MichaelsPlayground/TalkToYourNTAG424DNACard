@@ -30,6 +30,7 @@ import javax.crypto.spec.SecretKeySpec;
 public class LrpAuthentication {
 
     private final String TAG = LrpAuthentication.class.getName();
+    private IsoDep isoDep;
 
     public LrpAuthentication(IsoDep isodep){
     }

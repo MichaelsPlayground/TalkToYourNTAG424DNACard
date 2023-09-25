@@ -104,6 +104,7 @@ public class Ntag424DnaMethods {
     private Activity activity;
     // data from the tag on Init
     private IsoDep isoDep;
+    LrpAuthentication lrpAuthentication;
     private byte[] uid;
     private String[] techList;
     private boolean isIsoDepConnected = false;
@@ -3675,6 +3676,9 @@ Cmd.SetConfiguration C-APDU
                 errorCodeReason = "could not retrieve VersionInfo (maybe it is not a NTAG424DNA tag ?), aborted";
                 return false;
             }
+
+            lrpAuthentication = new LrpAuthentication(isoDep);
+
             if (versionInfo.getHardwareType() == (byte) 0x04) {
                 isTagNtag424Dna = true;
                 Log.d(TAG, "tag is identified as NTAG424DNA");
