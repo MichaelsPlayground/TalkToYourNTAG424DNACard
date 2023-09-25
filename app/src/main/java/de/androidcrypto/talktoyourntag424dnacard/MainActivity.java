@@ -422,7 +422,15 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
 
         // tests
         LrpAuthentication lrp = new LrpAuthentication(null); // todo change to onDetected, otherwise failure
-        lrp.runAllTests();
+        boolean lrpSelftest = lrp.runAllTests(false);
+        if (lrpSelftest == false) {
+            writeToUiAppend(output, "Detected an error during LRP self test - use this app with care");
+            writeToUiAppendBorderColor(errorCode, errorCodeLayout, "The LRP self test failed", COLOR_RED);
+        } else {
+            writeToUiAppend(output, "LRP self test SUCCESS");
+            writeToUiAppendBorderColor(errorCode, errorCodeLayout, "LRP self test SUCCESS", COLOR_GREEN);
+        }
+
         testNdefTemplate = findViewById(R.id.btnTestNdefTemplate);
 
         // some presets
