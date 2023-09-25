@@ -739,6 +739,9 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                     return;
                 }
 
+                boolean success = runAuthentication(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_AES_DEFAULT);
+
+                /*
                 // run a self test
                 //boolean getSesAuthKeyTestResult = desfireAuthenticateEv2.getSesAuthKeyTest();
                 //writeToUiAppend(output, "getSesAuthKeyTestResult: " + getSesAuthKeyTestResult);
@@ -774,9 +777,13 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                     writeToUiToast("your authentication log file is ready for export");
 
                     //showDialog(MainActivity.this, desfireAuthenticateProximity.getLogData());
+
+
                 } else {
                     writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
                 }
+
+                 */
             }
         });
 
@@ -961,8 +968,8 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 //boolean getSesAuthKeyTestResult = desfireAuthenticateEv2.getSesAuthKeyTest();
                 //writeToUiAppend(output, "getSesAuthKeyTestResult: " + getSesAuthKeyTestResult);
 
-                exportString = "";
-                exportStringFileName = "auth.html";
+                //exportString = "";
+                //exportStringFileName = "auth.html";
 
                 byte[] responseData = new byte[2];
                 boolean success = ntag424DnaMethods.authenticateLrpEv2First(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_AES_DEFAULT);
@@ -987,9 +994,9 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                     // show logData
 
                     // prepare data for export
-                    exportString = ntag424DnaMethods.getLogData();
-                    exportStringFileName = "auth0a_ev2.html";
-                    writeToUiToast("your authentication log file is ready for export");
+                    //exportString = ntag424DnaMethods.getLogData();
+                    //exportStringFileName = "auth0a_ev2.html";
+                    //writeToUiToast("your authentication log file is ready for export");
 
                     //showDialog(MainActivity.this, desfireAuthenticateProximity.getLogData());
                 } else {
@@ -2808,8 +2815,12 @@ C1h =
             writeToUiToast("your authentication log file is ready for export");
             return true;
         } else {
+            writeToUiAppend(errorCode, printData("responseData", responseData));;
             String errorName = ntag424DnaMethods.getErrorCodeReason();
             writeToUiAppendBorderColor(errorCode, errorCodeLayout, methodName + " FAILURE with error code: " + errorName, COLOR_RED);
+            if (Arrays.equals(responseData, Ntag424DnaMethods.PERMISSION_DENIED_FULL)) {
+                writeToUiAppend(output, "As we received a Permission Denied error (0x919D) the tag might be switched to LRP authentication");
+            }
             return false;
         }
     }

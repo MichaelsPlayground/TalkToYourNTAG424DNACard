@@ -177,6 +177,7 @@ public class Ntag424DnaMethods {
     // Status codes
     private static final byte OPERATION_OK = (byte) 0x00;
     private static final byte PERMISSION_DENIED = (byte) 0x9D;
+    public static final byte[] PERMISSION_DENIED_FULL = new byte[]{(byte) 0x91, (byte) 0x9D};
     private static final byte AUTHENTICATION_ERROR = (byte) 0xAE;
     private static final byte ADDITIONAL_FRAME = (byte) 0xAF;
     // Response codes
@@ -1420,7 +1421,7 @@ PERMISSION_DENIED
 
         // see example in Mifare DESFire Light Features and Hints AN12343.pdf pages 33 ff
         // and MIFARE DESFire Light contactless application IC MF2DLHX0.pdf pages 52 ff
-        boolean testMode = true;
+        boolean testMode = false;
         logData = "";
         invalidateAllData();
         final String methodName = "authenticateLrpEv2First";
@@ -1457,7 +1458,7 @@ PERMISSION_DENIED
         }
 
         log(methodName, "step 01 get encrypted rndB from card", false);
-        log(methodName, "This method is using the AUTHENTICATE_AES_EV2_FIRST_COMMAND so it will work with AES-based applications only", false);
+        log(methodName, "This method is using the AUTHENTICATE_EV2_FIRST_COMMAND", false);
         // authenticate 1st part
         byte[] apdu;
         byte[] response = new byte[0];
@@ -1467,7 +1468,7 @@ PERMISSION_DENIED
              * one could any LEN capability ??
              * I'm setting the byte[] to keyNo | 0x00
              */
-            byte LRP_INDICATOR = (byte) 0x02;
+            byte LRP_INDICATOR = (byte) 0x02; // 0x02 is indication LRP
             byte[] PCDCAP_2_1 = new byte[5];
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             baos.write(keyNo);
@@ -1492,6 +1493,7 @@ PERMISSION_DENIED
             log(methodName, "get enc rndB " + printData("response", response));
             // response: 013622ab415702ff1684c94fb2f9f517dc91af
             // response 01 = tag is in LRP mode || rndB (16 bytes) || status code (2 bytes)
+            // response -- = tag is in AES mode || rndB (16 bytes) || status code (2 bytes)
         } catch (IOException e) {
             Log.e(TAG, methodName + " transceive failed, IOException:\n" + e.getMessage());
             log(methodName, "IOException: " + e.getMessage());
@@ -1503,7 +1505,7 @@ PERMISSION_DENIED
         // we are expecting that the status code is 0xAF means more data need to get exchanged
         if (!checkResponseMoreData(responseBytes)) {
             log(methodName, "expected to get get 0xAF as error code but  found: " + printData("errorCode", responseBytes) + ", aborted");
-            System.arraycopy(responseBytes, 0, errorCode, 0, 2);
+            //System.arraycopy(responseBytes, 0, errorCode, 0, 2);
             return false;
         }
         // response: 05e8942501c8349464eacb3811bf586a 91af (18 bytes)
@@ -1514,7 +1516,14 @@ PERMISSION_DENIED
         // response when PICC is in LRP mode:
         // 01 fb23fd204377069411f9dcea628d796 991af (19 bytes)
         // AuthMode (1 byte) || PICC challenge RndB (16 bytes) || status code AF = more data (2 bytes)
-        byte[] rndB = Arrays.copyOfRange(getData(response), 1, response.length - 2);
+        byte[] rndB;
+        if (response.length == 18) {
+            // fall back to aes
+            rndB = Arrays.copyOfRange(getData(response), 0, response.length - 2);
+        } else {
+            // LRP mode
+            rndB = Arrays.copyOfRange(getData(response), 1, response.length - 2);
+        }
         log(methodName, printData("rndB", rndB));
 
         // step 14: generate RndA
@@ -1529,6 +1538,9 @@ PERMISSION_DENIED
         // is done in next step
 
         // step 16 session vector (used for session key calculation)
+        byte[] sessionVector = lrpAuthentication.getSessionVector(rndA, rndB);
+        Log.d(TAG, printData("sessionVector", sessionVector));
+
         // is done in generateLrpSessionKeys()
 
         /*
@@ -1561,8 +1573,14 @@ PERMISSION_DENIED
         boolean sessionKeySuccess = generateLrpSessionKeys(rndA, rndB, key);
         log(methodName, "sessionKeySuccess: " + sessionKeySuccess);
 
+        byte[] counter = Utils.hexStringToByteArray("00000000");
+        lrpAuthentication._init(key, 0, counter, true, false);
+
+        byte[] KSesAuthMaster = lrpAuthentication.generateKSesAuthMaster(sessionVector);
+        Log.d(TAG, printData("KSesAuthMaster", KSesAuthMaster));
+
         // AuthenticateLRPFirst Part 2
-        // step 19 (should be done BEFORE step 18 as in setp 18 the data is needed ??
+        // step 19 (should be done BEFORE step 18 as in step 18 the data is needed ??
         // step 19: PCDResponse = MAC_LRP (KSesAuthMACKey; RNDA || RNDB)
         // 89B59DCEDC31A3D3F38EF8D4810B3B4
 
@@ -1708,6 +1726,9 @@ PERMISSION_DENIED
         return false;
     }
 
+
+
+
     /**
      * calculate the LRP Session Keys (KeySets) during authenticateLrpEv2First
      * It uses the AesMac class for CMAC
@@ -1738,7 +1759,7 @@ PERMISSION_DENIED
             log(methodName, "authenticationKey is NULL or wrong length, aborted");
             return false;
         }
-        boolean TEST_MODE_GEN_LRP_SES_KEYS = true;
+        boolean TEST_MODE_GEN_LRP_SES_KEYS = false;
 
         if (TEST_MODE_GEN_LRP_SES_KEYS) {
             writeToUiAppend(textView, "### TEST_MODE enabled ###");
@@ -2236,7 +2257,7 @@ SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ Rn
         // we are expecting that the status code is 0xAF means more data need to get exchanged
         if (!checkResponseMoreData(responseBytes)) {
             log(methodName, "expected to get get 0xAF as error code but  found: " + printData("errorCode", responseBytes) + ", aborted");
-            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            //System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
             return false;
         }
         // now we know that we can work with the response, 16 bytes long
@@ -2466,8 +2487,8 @@ SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ Rn
         System.arraycopy(responseBytes, 0, errorCode, 0, 2);
         // we are expecting that the status code is 0xAF means more data need to get exchanged
         if (!checkResponseMoreData(responseBytes)) {
-            log(methodName, "expected to get get 0xAF as error code but  found: " + printData("errorCode", responseBytes) + ", aborted");
-            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            log(methodName, "expected to get get 0xAF as error code but found: " + printData("errorCode", responseBytes) + ", aborted");
+            //System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
             return false;
         }
         // now we know that we can work with the response, 16 bytes long

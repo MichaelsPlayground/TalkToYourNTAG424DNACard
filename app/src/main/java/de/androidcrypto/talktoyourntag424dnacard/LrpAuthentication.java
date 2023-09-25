@@ -32,6 +32,10 @@ public class LrpAuthentication {
     private final String TAG = LrpAuthentication.class.getName();
     private IsoDep isoDep;
 
+    private static final byte[] LRP_FIXED_COUNTER = new byte[]{(byte) (0x00), (byte) (0x01)}; // fixed to 0x0001
+    private static final byte[] LRP_FIXED_LENGTH = new byte[]{(byte) (0x00), (byte) (0x80)}; // fixed to 0x0080
+    private static final byte[] LRP_FIXED_LABEL = new byte[]{(byte) (0x96), (byte) (0x69)}; // fixed to 0x9669
+
     public LrpAuthentication(IsoDep isodep){
     }
 
@@ -194,6 +198,16 @@ public class LrpAuthentication {
         if (!compareTestValues(uk[1], uk01, "uk01", verbose)) return false;
         if (!compareTestValues(uk[2], uk02, "uk02", verbose)) return false;
         if (!compareTestValues(uk[3], uk03, "uk03", verbose)) return false;
+        /*
+        Log.d(TAG, "test_vectors_updated_keys with key 16*0");
+        key = new byte[16];
+        uk = generate_updated_keys(key);
+        Log.d(TAG, printData("uk00", uk[0]));
+        // uk00 length: 16 data: 50a26cb5df307e483de532f6afbec27b matches Mifare DESFire Light Features and Hints AN12343.pdf page 49
+        Log.d(TAG, printData("uk01", uk[1]));
+        Log.d(TAG, printData("uk02", uk[2]));
+        Log.d(TAG, printData("uk03", uk[3]));
+        */
         return true;
     }
 
@@ -355,7 +369,7 @@ public class LrpAuthentication {
     private final int AES_BLOCK_SIZE = 16;
     private static final byte P128 = (byte)0x87;
 
-    private boolean _init(byte[] key, int u, byte[] r, boolean pad, boolean verbose) {
+    public boolean _init(byte[] key, int u, byte[] r, boolean pad, boolean verbose) {
         /*
         Leakage Resilient Primitive
         param key: secret key from which updated keys will be derived
@@ -975,6 +989,65 @@ public class CMACShift {
 
 */
 
+    public byte[] getSessionVector(byte[] rndA, byte[] rndB) {
+        final String methodName = "getSessionVector";
+        Log.d(TAG,printData("rndA", rndA) + printData(" rndB", rndB) );
+        // sanity checks
+        if ((rndA == null) || (rndA.length != 16)) {
+            Log.d(TAG, "rndA is NULL or wrong length, aborted");
+            return null;
+        }
+        if ((rndB == null) || (rndB.length != 16)) {
+            Log.d(TAG, "rndB is NULL or wrong length, aborted");
+            return null;
+        }
+        boolean TEST_MODE_GEN_LRP_SES_KEYS = false;
+
+        // 74 D7 DF 6A 2C EC 0B 72 B4 12 DE 0D 2B 11 17 E6
+        //  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
+        byte[] rndA00to01 = Arrays.copyOfRange(rndA, 0, 2); // step 06 74d7
+        byte[] rndA02to07 = Arrays.copyOfRange(rndA, 2, 8); // step 07 DF6A2CEC0B72
+        byte[] rndA08to15 = Arrays.copyOfRange(rndA, 8, 16); // step 11 (wrong: 2B412DE0D2B1117E), correct B412DE0D2B1117E6
+        // 56 10 9A 31 97 7C 85 53 19 CD 46 18 C9 D2 AE D2
+        //  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
+        byte[] rndB00to05 = Arrays.copyOfRange(rndB, 0, 6); // step 08 56109A31977C
+        byte[] rndB06to15 = Arrays.copyOfRange(rndB, 6, 16); // step 10 855319CD4618C9D2AED2
+        byte[] xored = xor(rndA02to07, rndB00to05); // step 09
+        // step 12 sessionVector
+        // counter || length tag || RndA[15::14] || (RndA[13::8] XOR RndB[15::10]) || RndB[9::0] || RndA[7::0] || label
+        // counter || length tag || rndA00to01   || xored                          || rndB06to15 || rndA08to15 || label
+        // 0001008074D7897AB6DD9C0E855319CD4618C9D2AED2B412DE0D2B1117E69669
+        ByteArrayOutputStream baosSessionVector = new ByteArrayOutputStream();
+        baosSessionVector.write(LRP_FIXED_COUNTER, 0, LRP_FIXED_COUNTER.length);
+        baosSessionVector.write(LRP_FIXED_LENGTH, 0, LRP_FIXED_LENGTH.length);
+        baosSessionVector.write(rndA00to01, 0, rndA00to01.length);
+        baosSessionVector.write(xored, 0, xored.length);
+        baosSessionVector.write(rndB06to15, 0, rndB06to15.length);
+        baosSessionVector.write(rndA08to15, 0, rndA08to15.length);
+        baosSessionVector.write(LRP_FIXED_LABEL, 0, LRP_FIXED_LABEL.length);
+        byte[] sessionVector = baosSessionVector.toByteArray();
+        if (TEST_MODE_GEN_LRP_SES_KEYS) {
+            byte[] sessionVectorExp = hexStringToByteArray("0001008074D7897AB6DD9C0E855319CD4618C9D2AED2B412DE0D2B1117E69669");
+            if (!Arrays.equals(sessionVector, sessionVectorExp)) {
+                Log.d(TAG, printData("sessionVectorExp", sessionVectorExp));
+                Log.e(TAG, "sessionVector does not match the expected value, aborted");
+                return null;
+            } else {
+                Log.d(TAG, "sessionVector test PASSED");
+            }
+        }
+        Log.d(TAG, printData("sessionVector", sessionVector));
+        return sessionVector;
+    }
+
+    public byte[] generateKSesAuthMaster(byte[] sessionVector) {
+        Log.d(TAG, "generateKSesAuthMaster");
+        byte[] authUpdateKey = ku[0];
+
+        byte[] KSesAuthMaster = eval_lrp(authUpdateKey, false);
+        Log.d(TAG, printData("KSesAuthMaster", KSesAuthMaster));
+        return KSesAuthMaster;
+    }
 
 
 
