@@ -360,6 +360,12 @@ public class LrpAuthentication {
     private byte[][] ku; // updated keys
     private byte[] kp;
     private int nibbleSize;
+    // variables used for generating session keys
+    private byte[] sesAuthMasterKey;
+    private byte[][] sesAuthSPts;
+    private byte[][] sesAuthMacUpdateKeys;
+
+
 
     // variables used for MAC
     private byte[] k0, k1, buf;
@@ -370,6 +376,35 @@ public class LrpAuthentication {
     private static final byte P128 = (byte)0x87;
 
     public boolean _init(byte[] key, int u, byte[] r, boolean pad, boolean verbose) {
+        /*
+        Leakage Resilient Primitive
+        param key: secret key from which updated keys will be derived
+        param u: number of updated key to use (counting from 0)
+        param r: IV/counter value (default: all zeros)
+        param pad: whether to use bit padding or no (default: true)
+        uses a fixed nibbleSize of 4
+         */
+        if (verbose) {
+            Log.d(TAG, "_init library with " + Utils.printData("key", key) +
+                    " u: " + u + printData(" r", r) + " pad: " + pad);
+        }
+        if (r == null) {
+            this.r = new byte[16];
+        } else {
+            this.r = r;
+        }
+        this.key = key;
+        this.u = u;
+        this.pad = pad;
+        this.p = generate_plaintexts(this.key);
+        this.ku = generate_updated_keys(this.key);
+        this.kp = this.ku[this.u];
+        this.nibbleSize = 4;
+        this.blockSize = AES_BLOCK_SIZE;
+        return true;
+    }
+
+    public boolean _initOrg(byte[] key, int u, byte[] r, boolean pad, boolean verbose) {
         /*
         Leakage Resilient Primitive
         param key: secret key from which updated keys will be derived
@@ -645,7 +680,7 @@ public class LrpAuthentication {
         return plainText;
     }
 
-    private byte[] calculateCmac(byte[] key, byte[] msg, int tagSize, boolean verbose) {
+    public byte[] calculateCmac(byte[] key, byte[] msg, int tagSize, boolean verbose) {
         /*
         NewWithTagSize returns a hash.Hash computing the CMAC checksum with the
         given tag size. The tag size must between the 1 and the cipher's block size.
@@ -1046,9 +1081,15 @@ public class CMACShift {
 
         byte[] KSesAuthMaster = eval_lrp(authUpdateKey, false);
         Log.d(TAG, printData("KSesAuthMaster", KSesAuthMaster));
+        sesAuthMasterKey = KSesAuthMaster;
         return KSesAuthMaster;
     }
 
+    public void generateSessionAuthKeys() {
+        // see NTAG 424 DNA NT4H2421Gx.pdf page 33
+        sesAuthSPts = generate_plaintexts(sesAuthMasterKey);
+        sesAuthMacUpdateKeys = generate_updated_keys(sesAuthMasterKey);
+    }
 
 
     private byte[] cmacOrg(byte[] key, byte[] data, boolean verbose) {
@@ -1209,9 +1250,19 @@ public class CMACShift {
      * section for getter
      */
 
-
-
     public byte[][] getKu() {
         return ku;
+    }
+
+    public byte[] getSesAuthMasterKey() {
+        return sesAuthMasterKey;
+    }
+
+    public byte[][] getSesAuthSPts() {
+        return sesAuthSPts;
+    }
+
+    public byte[][] getSesAuthMacUpdateKeys() {
+        return sesAuthMacUpdateKeys;
     }
 }

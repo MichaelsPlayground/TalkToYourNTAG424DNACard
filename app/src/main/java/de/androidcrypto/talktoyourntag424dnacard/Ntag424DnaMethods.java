@@ -1734,12 +1734,16 @@ PERMISSION_DENIED
     }
 
     public boolean authenticateLrpEv2FirstTest() {
-        // this is based on Mifare DESFire Light Features and Hints AN12343.pdf pages 48
+
         Log.d(TAG, "========= authenticateLrpEv2FirstTest start =========");
+        // this is based on Mifare DESFire Light Features and Hints AN12343.pdf pages 44
+
         byte[] rndA = hexStringToByteArray("74D7DF6A2CEC0B72B412DE0D2B1117E6");
         byte[] rndB = hexStringToByteArray("56109A31977C855319CD4618C9D2AED2");
         byte[] key = hexStringToByteArray("00000000000000000000000000000000");
 
+
+        // this is based on Mifare DESFire Light Features and Hints AN12343.pdf pages 48
         // step 13 get session vector
         byte[] sessionVector = getLrpSessionVector(rndA, rndB);
         byte[] sessionVectorExp = hexStringToByteArray("0001008074D7897AB6DD9C0E855319CD4618C9D2AED2B412DE0D2B1117E69669");
@@ -1778,8 +1782,47 @@ PERMISSION_DENIED
         if (!lrpAuthentication.compareTestValues(updatedKey00, updatedKey00Exp, "updatedKey00", true)) return false;
         // OK
 
+        // step 15 concatenate rndA || rndB
+        byte[] rndArndB = concatenate(rndA, rndB);
+        Log.d(TAG, printData("rndA", rndA));
+        Log.d(TAG, printData("rndB", rndB));
+        Log.d(TAG, printData("rndArndB", rndArndB));
+
+        // step 19 PCDResponse = MAC_LRP (KSesAuthMACKey; RNDA || RNDB)
+        byte[] pcdResponse = lrpAuthentication.calculateCmac(key, rndArndB, 16, false);
+        Log.d(TAG, printData("pcdResponse", pcdResponse));
+//private byte[] calculateCmac(byte[] key, byte[] msg, int tagSize, boolean verbose) {
 
 
+
+        lrpAuthentication.generateKSesAuthMaster(sessionVector);
+        Log.d(TAG, printData("sessionVector", sessionVector));
+        lrpAuthentication.generateSessionAuthKeys();
+        byte[][] sesAuthSPts = lrpAuthentication.getSesAuthSPts();
+        byte[][] sesAuthMacUpdateKeys = lrpAuthentication.getSesAuthMacUpdateKeys();
+        for (int i = 0; i < sesAuthSPts.length; i++) {
+            Log.d(TAG, "sesAuthSPts " + i + printData(" SPT", sesAuthSPts[i]));
+        }
+        for (int i = 0; i < sesAuthMacUpdateKeys.length; i++) {
+            Log.d(TAG, "sesAuthMacUpdateKeys " + i + printData(" macUpdate", sesAuthMacUpdateKeys[i]));
+
+            byte[] uk = sesAuthMacUpdateKeys[i];
+            byte[] pcdResponse1 = lrpAuthentication.calculateCmac(uk, rndArndB, 16, false);
+            Log.d(TAG, printData("pcdResponse1", pcdResponse1));
+            byte[] pcdResponse1Exp = hexStringToByteArray("89B59DCEDC31A3D3F38EF8D4810B3B40");
+            lrpAuthentication.compareTestValues(pcdResponse1, pcdResponse1Exp, "pcdResponse1", true);
+            //if (!lrpAuthentication.compareTestValues(pcdResponse1, pcdResponse1Exp, "pcdResponse1", true)) return false;
+
+        }
+
+
+
+        byte[] pcdResponseExp = hexStringToByteArray("89B59DCEDC31A3D3F38EF8D4810B3B4");
+        if (!lrpAuthentication.compareTestValues(pcdResponse, pcdResponseExp, "pcdResponse", true)) return false;
+        byte[] data = concatenate(rndA, pcdResponse);
+        Log.d(TAG, printData("data", data));
+        byte[] dataExp = hexStringToByteArray("74D7DF6A2CEC0B72B412DE0D2B1117E6");
+        if (!lrpAuthentication.compareTestValues(data, dataExp, "data", true)) return false;
 
 
 
