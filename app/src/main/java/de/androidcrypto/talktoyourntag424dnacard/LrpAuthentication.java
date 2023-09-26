@@ -1189,7 +1189,7 @@ public class CMACShift {
      * section for test helper
      */
 
-    private boolean compareTestValues(byte[] real, byte[] expected, String valueName, boolean verbose) {
+    public boolean compareTestValues(byte[] real, byte[] expected, String valueName, boolean verbose) {
         if (Arrays.equals(real, expected)) {
             if (verbose) Log.d(TAG, "valueName: " + valueName + " EQUALS");
             return true;
@@ -1201,4 +1201,17 @@ public class CMACShift {
         }
     }
 
+    public byte[][] getP() {
+        return p;
+    }
+
+    /**
+     * section for getter
+     */
+
+
+
+    public byte[][] getKu() {
+        return ku;
+    }
 }

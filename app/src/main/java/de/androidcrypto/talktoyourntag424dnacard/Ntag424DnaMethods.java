@@ -1570,6 +1570,13 @@ PERMISSION_DENIED
         }
          */
 
+        // testdata Mifare DESFire Light Features and Hints AN12343.pdf page 48
+        /*
+        rndA = hexStringToByteArray("74D7DF6A2CEC0B72B412DE0D2B1117E6");
+        rndB = hexStringToByteArray("56109A31977C855319CD4618C9D2AED2");
+        key = hexStringToByteArray("00000000000000000000000000000000");
+*/
+
         boolean sessionKeySuccess = generateLrpSessionKeys(rndA, rndB, key);
         log(methodName, "sessionKeySuccess: " + sessionKeySuccess);
 
@@ -1726,6 +1733,59 @@ PERMISSION_DENIED
         return false;
     }
 
+    public boolean authenticateLrpEv2FirstTest() {
+        // this is based on Mifare DESFire Light Features and Hints AN12343.pdf pages 48
+        Log.d(TAG, "========= authenticateLrpEv2FirstTest start =========");
+        byte[] rndA = hexStringToByteArray("74D7DF6A2CEC0B72B412DE0D2B1117E6");
+        byte[] rndB = hexStringToByteArray("56109A31977C855319CD4618C9D2AED2");
+        byte[] key = hexStringToByteArray("00000000000000000000000000000000");
+
+        // step 13 get session vector
+        byte[] sessionVector = getLrpSessionVector(rndA, rndB);
+        byte[] sessionVectorExp = hexStringToByteArray("0001008074D7897AB6DD9C0E855319CD4618C9D2AED2B412DE0D2B1117E69669");
+        if (!lrpAuthentication.compareTestValues(sessionVector, sessionVectorExp, "sessionVector", true)) return false;
+
+        // steps 14 ff Generation of Secret Plaintexts for this Authentication (AuthSPT)
+        // steps 33 ff Generation of AuthUpdateKey
+        // done in init
+        /*
+        Leakage Resilient Primitive
+        param key: secret key from which updated keys will be derived
+        param u: number of updated key to use (counting from 0)
+        param r: IV/counter value (default: all zeros)
+        param pad: whether to use bit padding or no (default: true)
+        uses a fixed nibbleSize of 4
+         */
+        byte[] counter = Utils.hexStringToByteArray("00000000");
+        // init with u = updated key to use = 1
+        boolean initSuccess = lrpAuthentication._init(key, 1, counter, true, true);
+        Log.d(TAG, "initSuccess: " + initSuccess);
+
+        Log.d(TAG, "* AuthSPT *");
+        byte[][] authSPTs = lrpAuthentication.getP();
+        for (int i = 0; i < authSPTs.length; i++) {
+            Log.d(TAG, "authSPT " + i + printData(" PT", authSPTs[i]));
+        }
+
+        Log.d(TAG, "* updated keys *");
+        byte[][] updatedKeys = lrpAuthentication.getKu();
+        for (int i = 0; i < updatedKeys.length; i++) {
+            Log.d(TAG, "upd key " + i + printData(" uk", updatedKeys[i]));
+        }
+        // we check the updated key[0]
+        byte[] updatedKey00 = updatedKeys[0];
+        byte[] updatedKey00Exp = hexStringToByteArray("50A26CB5DF307E483DE532F6AFBEC27B");
+        if (!lrpAuthentication.compareTestValues(updatedKey00, updatedKey00Exp, "updatedKey00", true)) return false;
+        // OK
+
+
+
+
+
+
+        Log.d(TAG, "========= authenticateLrpEv2FirstTest end =========");
+        return false;
+    }
 
 
 

@@ -3672,6 +3672,8 @@ C1h =
 
         ntag424DnaMethods = new Ntag424DnaMethods(output, tag, activity);
 
+        // self test for authenticateLrpEv2First
+        ntag424DnaMethods.authenticateLrpEv2FirstTest();
 /*
         isoDep = null;
         try {
