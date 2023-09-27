@@ -1077,9 +1077,10 @@ public class CMACShift {
 
     public byte[] generateKSesAuthMaster(byte[] sessionVector) {
         Log.d(TAG, "generateKSesAuthMaster");
-        byte[] authUpdateKey = ku[0];
+        byte[] authUpdateKey = ku[0].clone();
+        Log.d(TAG, printData("authUpdateKey (ku[0])", authUpdateKey));
 
-        byte[] KSesAuthMaster = eval_lrp(authUpdateKey, false);
+        byte[] KSesAuthMaster = calculateCmac(authUpdateKey, sessionVector, AES_BLOCK_SIZE, false);
         Log.d(TAG, printData("KSesAuthMaster", KSesAuthMaster));
         sesAuthMasterKey = KSesAuthMaster;
         return KSesAuthMaster;

@@ -1762,7 +1762,7 @@ PERMISSION_DENIED
          */
         byte[] counter = Utils.hexStringToByteArray("00000000");
         // init with u = updated key to use = 1
-        boolean initSuccess = lrpAuthentication._init(key, 1, counter, true, true);
+        boolean initSuccess = lrpAuthentication._init(key, 2, counter, true, true);
         Log.d(TAG, "initSuccess: " + initSuccess);
 
         Log.d(TAG, "* AuthSPT *");
@@ -1776,11 +1776,21 @@ PERMISSION_DENIED
         for (int i = 0; i < updatedKeys.length; i++) {
             Log.d(TAG, "upd key " + i + printData(" uk", updatedKeys[i]));
         }
-        // we check the updated key[0]
+        // we check the updated key[0] = AuthUpdateKey
         byte[] updatedKey00 = updatedKeys[0];
         byte[] updatedKey00Exp = hexStringToByteArray("50A26CB5DF307E483DE532F6AFBEC27B");
         if (!lrpAuthentication.compareTestValues(updatedKey00, updatedKey00Exp, "updatedKey00", true)) return false;
         // OK
+
+        // Generation of KSesAuthMaster
+        // KSesAuthMaster = CMAC-LRP(AuthUpdateKey, Session Vector)
+        Log.d(TAG, printData("sessionVector", sessionVector));
+        byte[] sesAuthMasterKey = lrpAuthentication.generateKSesAuthMaster(sessionVector);
+        byte[] sesAuthMasterKeyExp = hexStringToByteArray("132D7E6F35BA861F39B37221214E25A5");
+        if (!lrpAuthentication.compareTestValues(sesAuthMasterKey, sesAuthMasterKeyExp, "sesAuthMasterKey", true)) return false;
+        Log.d(TAG, "*** Generation of KSesAuthMaster VERIFIED ***");
+
+
 
         // step 15 concatenate rndA || rndB
         byte[] rndArndB = concatenate(rndA, rndB);
@@ -1795,8 +1805,8 @@ PERMISSION_DENIED
 
 
 
-        lrpAuthentication.generateKSesAuthMaster(sessionVector);
-        Log.d(TAG, printData("sessionVector", sessionVector));
+
+
         lrpAuthentication.generateSessionAuthKeys();
         byte[][] sesAuthSPts = lrpAuthentication.getSesAuthSPts();
         byte[][] sesAuthMacUpdateKeys = lrpAuthentication.getSesAuthMacUpdateKeys();
@@ -2563,6 +2573,122 @@ SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ Rn
             errorCodeReason = "isoDep is NULL (maybe it is not a NTAG424DNA tag ?), aborted";
             return false;
         }
+
+        /**
+         * LRP authentication steps
+         * 01 PCD sends AuthenticateLRPFirst to the PICC
+         * 02 PICC responses a 16 byte random value (rndB)
+         * 02b PICC validates the targeted key
+         * 03 PCD generates a 16 byte random value (rndA)
+         * 04 additionally: PCD sets CmdCtr and EncCtr to zero and generate a random TI
+         * 05 PCD calculates the session keys SesAuthMACKey and SesAuthENCKey, as specified in
+         *    Section 9.2.7 (set of plaintext and update keys)
+         * 06 PCD responses: a MAC over the concatenation of RndA with RndB applying the
+         *    SesAuthMACKey with the algorithm defined in Section 9.2.3
+         *    Note that MACs are not truncated during the authentication. Within
+         *    AuthenticateLRPFirst - Part2, the concatenation of RndA and this
+         *    MAC is sent to the PICC
+         * 07 PICC validates the received MAC. If not as expected, the command is rejected.
+         *    Else it encrypts the generated TI concatenated with 12 bytes of capabilities
+         *    to the PCD: 6 bytes of PICC capabilities PDCap2 and 6 bytes of PCD capabilities
+         *    PCDCap2 that were received on the command (sent back for verification).
+         *    Encryption is done according to Section 9.2.4, applying SesAuthENCKey
+         * 08 PCDCap2 is used to refer both to the value sent from the PCD to the PICC and to
+         *    the value used in the encrypted response message from the PICC to the PCD where in
+         *    this case the PCDCap2 is the adjusted version of the originally sent PCDCap2: i.e.
+         *    truncated or padded with zero bytes to a length of 6 bytes if needed. After that
+         *    encryption, the PICCResponse will also compute a MAC over the concatenation of RndB,
+         *    RndA and the encrypted data.
+         *
+         * 9.2.7  Session key generation
+         *        Next to the algorithms for MAC calculation and encryption, one of the major
+         *        differences between the LRP secure messaging and the AES secure messaging is
+         *        that the session keys are generated and already applied during the authentication
+         *        with AuthenticateLRPFirst or AuthenticateLRPNonFirst.
+         *        Also for the LRP protocol, two keys are generated:
+         *        • SesAuthMACKey for MACing of messages
+         *        • SesAuthENCKey for encryption and decryption of messages
+         *        During the authentication, the SesAuthMACKey is used for both AuthenticateLRPFirst
+         *        and AuthenticateLRPNonFirst. SesAuthENCKey is only used for AuthenticateLRPFirst.
+         *        The Pseudo Random Function PRF(key; message) applied during the key generation
+         *        is the CMAC algorithm on top of the LRP primitive. This is specified in [10], see
+         *        also Section 9.2.3. The key derivation key is the key Kx that was applied during
+         *        authentication. Note that from this key a set of plaintexts and updated key is
+         *        computed, so the static key is only used in this derivation. The generated session
+         *        keys are AES keys. The input data is constructed using the following fields as
+         *        defined by [8]. Note that NIST SP 800-108 allows defining a different order than
+         *        proposed by the standard as long as it is unambiguously defined.
+         *        • a 2-byte counter, fixed to 0001h as only 128-bit keys are generated
+         *        • a 2-byte length, fixed to 0080h as only 128-bit keys are generated
+         *        • a 26-byte context, constructed using the two random numbers exchanged, RndA and
+         *          RndB
+         *        • a 2-byte label: 9669h
+         *        Firstly, the 32-byte input session vector SV is derived as follows:
+         *        SV = 00h || 01h || 00h || 80h || RndA[15::14] || (RndA[13::8] # RndB[15::10]) ||
+         *             RndB[9::0] || RndA[7::0] || 96h || 69h
+         *        with # being the XOR-operator.
+         *        Then, the session key material is constructed as follows:
+         *        AuthSPT = generatePlaintexts(4; Kx)
+         *        {AuthUpdateKey} = generateUpdatedKeys(1; Kx)
+         *        SesAuthMasterKey = MACLRP (Kx; SV )
+         *        SesAuthSPT = generatePlaintexts(4; SesAuthMasterKey)
+         *        {SesAuthMACUpdateKey; SesAuthENCUpdateKey} = generateUpdatedKeys(2; SesAuthMasterKey)
+         *        with generatePlaintexts and generateUpdatedKeys the functions from [10]. Note that
+         *        the output of generateUpdatedKeys is shown in the order that the keys are generated.
+         *        The actual SesAuthMACKey then consists for LRP of the set of plaintexts SesAuthSPT
+         *        (consisting of 16 16-byte values) and SesAuthMACUpdateKey. The SesAuthENCKey consists
+         *        of the same set of plaintexts SesAuthSPT and SesAuthENCUpdateKey.
+         *
+         * 9.2.3  MAC calculation
+         *        MACs are computed by using a CMAC construction on top of the LRP primitive. This is
+         *        specified in [10]. This document uses the following notation where the right hand
+         *        refers to the notation of [10].
+         *        MACLRP(key,message) = CMAC_LRP(4,key, Len(message),message)
+         *        Note that in the LRP context a key is not purely a single value, but rather consists
+         *        of the associated set of plain texts, an updated key and in context of CMAC also the
+         *        subkeys K1 and K2. Therefore K1 and K2 are not shown (contrary to [10]) as they can
+         *        be calculated inside.
+         *        MACtLRP(key, message) denotes the CMAC after truncation to 8 bytes which is identical
+         *        to the truncation of the AES secure messaging i.e. the even-numbered bytes are retained
+         *        in most-to-least-significant order, see Section 9.1.3.
+         *        The initialization vector used for the CMAC computation is the zero byte IV as
+         *        prescribed [10].
+         *
+         * 9.2.4  Encryption
+         *        Encryption and decryption are calculated using a Leakage Resilient Indexed CodeBook
+         *        (LRICB) construction on top of the LRP primitive: LRICBof [10].
+         *        For this purpose an Encryption Counter is maintained: EncCtr is a 32-bit unsigned
+         *        integer as Input Vector (IV) for encryption/decryption. The EncCtr is reset to
+         *        000000000h at PCD and PICC when starting an authentication with AuthenticateLRPFirst
+         *        or AuthenticateLRPNonFirst targeting LRP. The counter is incremented during each
+         *        encryption/decryption of each 16-byte block. i.e. for 64-byte encryption/decryption
+         *        the EncCtr is increased by 5 due to 4 blocks of 16-byte of data plus one block of
+         *        padding. Note that for AuthenticateLRPFirst the value 00000000h is already used for
+         *        the response of part 2, so the actual secure messaging starts from 00000001h. For
+         *        AuthenticateLRPNonFirst, secure messaging starts from 00000000h as the counter is
+         *        not used during the authentication. EncCtr is further maintained as long as the
+         *        PICC remains in LRP authenticated state. Note that for the key stream calculation [10],
+         *        the counter is represented MSB first.
+         *        Padding is applied according to Padding Method 2 of ISO/IEC 9797-1 [7], i.e. by
+         *        adding always 80h followed, if required, by zero bytes until a string with a length
+         *        of a multiple of 16 bytes is obtained. Note that if the plain data is a multiple of
+         *        16 bytes already, an additional padding block is added. The only exception is during
+         *        the authentication itself (AuthenticateLRPFirst and AuthenticateLRPNonFirst), where
+         *        no padding is applied at all.
+         *        The notation ELRP(key, plaintext) is used to denote the encryption, i.e. LRICBEnc
+         *        of [10] and DLRP(key, ciphertext) for the complementary decryption operation.
+         *        Note that in the LRP context a key is not purely a single value, but rather
+         *        consists of the associated set of plain texts and updated key. Also, as specified
+         *        in [10], the EncCtr is updated as part of the operation.
+         *        Note that the EncCtr cannot overflow. Due to the supported file sizes, the CmdCtr
+         *        will always expire before.
+         *        Note that the MSB representation of EncCtr is different from other counter
+         *        representations in this specification, but allows saving some AES calculations in
+         *        the key stream generation.
+         *
+         */
+
+
         log(methodName, "step 01 get encrypted rndB from card");
         log(methodName, "This method is using the AUTHENTICATE_AES_EV2_NON_FIRST_COMMAND so it will work with AES-based application only");
         // authenticate 1st part
