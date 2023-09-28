@@ -1762,7 +1762,7 @@ PERMISSION_DENIED
          */
         byte[] counter = Utils.hexStringToByteArray("00000000");
         // init with u = updated key to use = 1
-        boolean initSuccess = lrpAuthentication._init(key, 2, counter, true, true);
+        boolean initSuccess = lrpAuthentication._init(key, 0, counter, true, true);
         Log.d(TAG, "initSuccess: " + initSuccess);
 
         Log.d(TAG, "* AuthSPT *");
@@ -1782,58 +1782,89 @@ PERMISSION_DENIED
         if (!lrpAuthentication.compareTestValues(updatedKey00, updatedKey00Exp, "updatedKey00", true)) return false;
         // OK
 
-        // Generation of KSesAuthMaster
+        // step 37 Generation of KSesAuthMaster
         // KSesAuthMaster = CMAC-LRP(AuthUpdateKey, Session Vector)
         Log.d(TAG, printData("sessionVector", sessionVector));
-        byte[] sesAuthMasterKey = lrpAuthentication.generateKSesAuthMaster(sessionVector);
+        byte[] sesAuthMasterKey = lrpAuthentication.calculateCmac(key, sessionVector, 16,false);
         byte[] sesAuthMasterKeyExp = hexStringToByteArray("132D7E6F35BA861F39B37221214E25A5");
         if (!lrpAuthentication.compareTestValues(sesAuthMasterKey, sesAuthMasterKeyExp, "sesAuthMasterKey", true)) return false;
         Log.d(TAG, "*** Generation of KSesAuthMaster VERIFIED ***");
 
+        // step 38 ff Generation of Secret Plaintexts for this Session (SesAuthSPT)
+        byte[][] sesAuthSPTs = lrpAuthentication.generate_plaintexts(sesAuthMasterKey);
+        Log.d(TAG, "generate sesAuthSPTs");
+        for (int i = 0; i < sesAuthSPTs.length; i++) {
+            //Log.d(TAG, "i: " + i + printData(" SPT", sesAuthSPTs[i]));
+        }
+        // validate just sesAuthSPT 15
+        byte[] sesAuthSPT15 = sesAuthSPTs[15];
+        byte[] sesAuthSPT15Exp = Utils.hexStringToByteArray("6ba505793cb49fe3f81a2e420807e9a7");
+        if (!lrpAuthentication.compareTestValues(sesAuthSPT15, sesAuthSPT15Exp, "sesAuthSPT15", true)) return false;
 
+        // step 5 ff Generation of Session Keys
+        byte[][] sesKeys = lrpAuthentication.generate_updated_keys(sesAuthMasterKey);
+        Log.d(TAG, "generate sesKeys");
+        for (int i = 0; i < sesKeys.length; i++) {
+            //Log.d(TAG, "sesKey " + i + printData(" sesKey", sesKeys[i]));
+        }
+        // validate just keys 00 and 01
+        byte[] sesAuthMACUpdateKey = sesKeys[0];
+        byte[] sesAuthMACUpdateKeyExp = Utils.hexStringToByteArray("F56CADE598CC2A3FE47E438CFEB885DB");
+        if (!lrpAuthentication.compareTestValues(sesAuthMACUpdateKey, sesAuthMACUpdateKeyExp, "sesAuthMACUpdateKey", true)) return false;
+        byte[] sesAuthENCUpdateKey = sesKeys[1];
+        byte[] sesAuthENCUpdateKeyExp = Utils.hexStringToByteArray("E9043D65AB21C0C422781099AB25EFDD");
+        if (!lrpAuthentication.compareTestValues(sesAuthENCUpdateKey, sesAuthENCUpdateKeyExp, "sesAuthENCUpdateKey", true)) return false;
+        // update keys are fine
 
         // step 15 concatenate rndA || rndB
         byte[] rndArndB = concatenate(rndA, rndB);
         Log.d(TAG, printData("rndA", rndA));
         Log.d(TAG, printData("rndB", rndB));
         Log.d(TAG, printData("rndArndB", rndArndB));
+        byte[] rndArndBExp = Utils.hexStringToByteArray("74D7DF6A2CEC0B72B412DE0D2B1117E656109A31977C855319CD4618C9D2AED2");
+        if (!lrpAuthentication.compareTestValues(rndArndB, rndArndBExp, "rndArndB", true)) return false;
 
         // step 19 PCDResponse = MAC_LRP (KSesAuthMACKey; RNDA || RNDB)
-        byte[] pcdResponse = lrpAuthentication.calculateCmac(key, rndArndB, 16, false);
+
+        initSuccess = lrpAuthentication._init(sesAuthMasterKey, 0, counter, true, true);
+        Log.d(TAG, "initSuccess: " + initSuccess);
+
+        // verify created sesPts etc
+        // step 38 ff Generation of Secret Plaintexts for this Session (SesAuthSPT)
+        byte[][] sesAuthSPTsN = lrpAuthentication.getP();
+        Log.d(TAG, "generate sesAuthSPTsN");
+        for (int i = 0; i < sesAuthSPTsN.length; i++) {
+            Log.d(TAG, "i: " + i + printData(" SPT", sesAuthSPTs[i]));
+        }
+        // validate just sesAuthSPT 15
+        byte[] sesAuthSPT15N = sesAuthSPTsN[15];
+        byte[] sesAuthSPT15NExp = Utils.hexStringToByteArray("6ba505793cb49fe3f81a2e420807e9a7");
+        if (!lrpAuthentication.compareTestValues(sesAuthSPT15N, sesAuthSPT15NExp, "sesAuthSPT15N", true)) return false;
+
+        // step 5 ff Generation of Session Keys
+        byte[][] sesKeysN = lrpAuthentication.getKu();
+        Log.d(TAG, "generate sesKeysN");
+        for (int i = 0; i < sesKeysN.length; i++) {
+            Log.d(TAG, "sesKeyN " + i + printData(" sesKeyN", sesKeysN[i]));
+        }
+        // validate just keys 00 and 01
+        byte[] sesAuthMACUpdateKeyN = sesKeysN[0];
+        byte[] sesAuthMACUpdateKeyNExp = Utils.hexStringToByteArray("F56CADE598CC2A3FE47E438CFEB885DB");
+        if (!lrpAuthentication.compareTestValues(sesAuthMACUpdateKeyN, sesAuthMACUpdateKeyNExp, "sesAuthMACUpdateKeyN", true)) return false;
+        byte[] sesAuthENCUpdateKeyN = sesKeysN[1];
+        byte[] sesAuthENCUpdateKeyNExp = Utils.hexStringToByteArray("E9043D65AB21C0C422781099AB25EFDD");
+        if (!lrpAuthentication.compareTestValues(sesAuthENCUpdateKeyN, sesAuthENCUpdateKeyNExp, "sesAuthENCUpdateKeyN", true)) return false;
+        // keys are fine
+
+        byte[] pcdResponse = lrpAuthentication.calculateCmac(sesAuthMACUpdateKeyN, rndArndB, 16, false);
         Log.d(TAG, printData("pcdResponse", pcdResponse));
+        byte[] pcdResponseExp = Utils.hexStringToByteArray("89B59DCEDC31A3D3F38EF8D4810B3B4");
+        if (!lrpAuthentication.compareTestValues(pcdResponse, pcdResponseExp, "pcdResponse", true)) return false;
+
+
 //private byte[] calculateCmac(byte[] key, byte[] msg, int tagSize, boolean verbose) {
 
-
-
-
-
-        lrpAuthentication.generateSessionAuthKeys();
-        byte[][] sesAuthSPts = lrpAuthentication.getSesAuthSPts();
-        byte[][] sesAuthMacUpdateKeys = lrpAuthentication.getSesAuthMacUpdateKeys();
-        for (int i = 0; i < sesAuthSPts.length; i++) {
-            Log.d(TAG, "sesAuthSPts " + i + printData(" SPT", sesAuthSPts[i]));
-        }
-        for (int i = 0; i < sesAuthMacUpdateKeys.length; i++) {
-            Log.d(TAG, "sesAuthMacUpdateKeys " + i + printData(" macUpdate", sesAuthMacUpdateKeys[i]));
-
-            byte[] uk = sesAuthMacUpdateKeys[i];
-            byte[] pcdResponse1 = lrpAuthentication.calculateCmac(uk, rndArndB, 16, false);
-            Log.d(TAG, printData("pcdResponse1", pcdResponse1));
-            byte[] pcdResponse1Exp = hexStringToByteArray("89B59DCEDC31A3D3F38EF8D4810B3B40");
-            lrpAuthentication.compareTestValues(pcdResponse1, pcdResponse1Exp, "pcdResponse1", true);
-            //if (!lrpAuthentication.compareTestValues(pcdResponse1, pcdResponse1Exp, "pcdResponse1", true)) return false;
-
-        }
-
-
-
-        byte[] pcdResponseExp = hexStringToByteArray("89B59DCEDC31A3D3F38EF8D4810B3B4");
-        if (!lrpAuthentication.compareTestValues(pcdResponse, pcdResponseExp, "pcdResponse", true)) return false;
-        byte[] data = concatenate(rndA, pcdResponse);
-        Log.d(TAG, printData("data", data));
-        byte[] dataExp = hexStringToByteArray("74D7DF6A2CEC0B72B412DE0D2B1117E6");
-        if (!lrpAuthentication.compareTestValues(data, dataExp, "data", true)) return false;
-
+        if (sesKeys.length > 1) return false;
 
 
         Log.d(TAG, "========= authenticateLrpEv2FirstTest end =========");
@@ -1872,7 +1903,7 @@ PERMISSION_DENIED
             log(methodName, "authenticationKey is NULL or wrong length, aborted");
             return false;
         }
-        boolean TEST_MODE_GEN_LRP_SES_KEYS = false;
+        boolean TEST_MODE_GEN_LRP_SES_KEYS = true;
 
         if (TEST_MODE_GEN_LRP_SES_KEYS) {
             writeToUiAppend(textView, "### TEST_MODE enabled ###");

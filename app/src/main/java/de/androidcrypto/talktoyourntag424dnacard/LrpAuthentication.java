@@ -489,7 +489,7 @@ public class LrpAuthentication {
         // returns big endian
     }
 
-    private byte[][] generate_plaintexts(byte[] key) {
+    public byte[][] generate_plaintexts(byte[] key) {
         return generate_plaintexts(key, 4, false);
     }
 
@@ -516,7 +516,7 @@ public class LrpAuthentication {
         return p;
     }
 
-    private byte[][] generate_updated_keys(byte[] key) {
+    public byte[][] generate_updated_keys(byte[] key) {
         return generate_updated_keys(key, 4, false);
     }
 
@@ -686,7 +686,7 @@ public class LrpAuthentication {
         given tag size. The tag size must between the 1 and the cipher's block size.
          */
         /**
-         * Calculate CMAC_LRP
+         * Calculate CMAC_LRP, also named CMAC-LRP, LRP-CMAC or LRP_CMAC
          * Algorithm: 6
          * param data: message to be authenticated
          * return: CMAC result
