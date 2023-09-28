@@ -1519,9 +1519,11 @@ PERMISSION_DENIED
         byte[] rndB;
         if (response.length == 18) {
             // fall back to aes
+            Log.d(TAG, "fall back to AES mode");
             rndB = Arrays.copyOfRange(getData(response), 0, response.length - 2);
         } else {
             // LRP mode
+            Log.d(TAG, "LRP mode");
             rndB = Arrays.copyOfRange(getData(response), 1, response.length - 2);
         }
         log(methodName, printData("rndB", rndB));
@@ -1534,202 +1536,141 @@ PERMISSION_DENIED
         }
         log(methodName, printData("rndA", rndA));
 
-        // step 15: concatenate RndA || RndB = "dynamic data"
-        // is done in next step
+        // this is based on Mifare DESFire Light Features and Hints AN12343.pdf pages 48
+        // step 13 get session vector
+        byte[] sessionVector = getLrpSessionVector(rndA, rndB);
+        //byte[] sessionVectorExp = hexStringToByteArray("0001008074D7897AB6DD9C0E855319CD4618C9D2AED2B412DE0D2B1117E69669");
+        //if (!lrpAuthentication.compareTestValues(sessionVector, sessionVectorExp, "sessionVector", true)) return false;
 
-        // step 16 session vector (used for session key calculation)
-        byte[] sessionVector = lrpAuthentication.getSessionVector(rndA, rndB);
-        Log.d(TAG, printData("sessionVector", sessionVector));
-
-        // is done in generateLrpSessionKeys()
-
+        // steps 14 ff Generation of Secret Plaintexts for this Authentication (AuthSPT)
+        // steps 33 ff Generation of AuthUpdateKey
+        // done in init
         /*
-        // fixed counter || fixed length || dynamic context || fixed label
-        // 0001 || 0080 || dynamic data || 9669
-        final byte[] FIXED_COUNTER = new byte[]{(byte) (0x00), (byte) (0x01)}; // fixed to 0x0001
-        final byte[] FIXED_LENGTH = new byte[]{(byte) (0x00), (byte) (0x80)}; // fixed to 0x0080
-        final byte[] FIXED_LABEL = new byte[]{(byte) (0x96), (byte) (0x69)}; // fixed to 0x9669
-        // build the session vector
-        ByteArrayOutputStream baosSessionVector = new ByteArrayOutputStream();
-        baosSessionVector.write(FIXED_COUNTER, 0, FIXED_COUNTER.length);
-        baosSessionVector.write(FIXED_LENGTH, 0, FIXED_LENGTH.length);
-        baosSessionVector.write(rndA, 0, rndA.length);
-        baosSessionVector.write(rndB, 0, rndB.length);
-        baosSessionVector.write(FIXED_LABEL, 0, FIXED_LABEL.length);
-        byte[] sessionVector = baosSessionVector.toByteArray();
-        log(methodName, printData("sessionVector", sessionVector));
-        if (testMode) {
-            // 0001008074D7897AB6DD9C0E855319CD4618C9D2AED2B412DE0D2B1117E69669
-            byte[] sessionVectorExp = hexStringToByteArray("0001008074D7897AB6DD9C0E855319CD4618C9D2AED2B412DE0D2B1117E69669");
-            if (!Arrays.equals(sessionVector, sessionVectorExp)) {
-                log(methodName, printData("sessionVectorExp", sessionVectorExp));
-                Log.e(TAG, "sessionVector does not match the expected value, aborted");
-                return false;
-            }
-            sessionVector = sessionVectorExp.clone();
-        }
+        Leakage Resilient Primitive
+        param key: secret key from which updated keys will be derived
+        param u: number of updated key to use (counting from 0)
+        param r: IV/counter value (default: all zeros)
+        param pad: whether to use bit padding or no (default: true)
+        uses a fixed nibbleSize of 4
          */
-
-        // testdata Mifare DESFire Light Features and Hints AN12343.pdf page 48
-        /*
-        rndA = hexStringToByteArray("74D7DF6A2CEC0B72B412DE0D2B1117E6");
-        rndB = hexStringToByteArray("56109A31977C855319CD4618C9D2AED2");
-        key = hexStringToByteArray("00000000000000000000000000000000");
-*/
-
-        boolean sessionKeySuccess = generateLrpSessionKeys(rndA, rndB, key);
-        log(methodName, "sessionKeySuccess: " + sessionKeySuccess);
-
         byte[] counter = Utils.hexStringToByteArray("00000000");
-        lrpAuthentication._init(key, 0, counter, true, false);
+        // init with u = updated key to use = 1
+        boolean initSuccess = lrpAuthentication._init(key, 0, counter, true, true);
+        Log.d(TAG, "initSuccess: " + initSuccess);
 
-        byte[] KSesAuthMaster = lrpAuthentication.generateKSesAuthMaster(sessionVector);
-        Log.d(TAG, printData("KSesAuthMaster", KSesAuthMaster));
+        Log.d(TAG, "* AuthSPT *");
+        byte[][] authSPTs = lrpAuthentication.getP();
+        for (int i = 0; i < authSPTs.length; i++) {
+            Log.d(TAG, "authSPT " + i + printData(" PT", authSPTs[i]));
+        }
 
-        // AuthenticateLRPFirst Part 2
-        // step 19 (should be done BEFORE step 18 as in step 18 the data is needed ??
-        // step 19: PCDResponse = MAC_LRP (KSesAuthMACKey; RNDA || RNDB)
-        // 89B59DCEDC31A3D3F38EF8D4810B3B4
+        Log.d(TAG, "* updated keys *");
+        byte[][] updatedKeys = lrpAuthentication.getKu();
+        for (int i = 0; i < updatedKeys.length; i++) {
+            Log.d(TAG, "upd key " + i + printData(" uk", updatedKeys[i]));
+        }
+        // we check the updated key[0] = AuthUpdateKey
+        byte[] updatedKey00 = updatedKeys[0];
+        byte[] updatedKey00Exp = hexStringToByteArray("50A26CB5DF307E483DE532F6AFBEC27B");
+        //if (!lrpAuthentication.compareTestValues(updatedKey00, updatedKey00Exp, "updatedKey00", true)) return false;
+        // OK
 
-        // step 18: Data = RndA || PCDResponse
-        // 74D7DF6A2CEC0B72B412DE0D2B1117E689B59DCEDC31A3D3F38EF8D4810B3B4
+        // Generation of KSesAuthMaster
+        // KSesAuthMaster = CMAC-LRP(AuthUpdateKey, Session Vector)
+        Log.d(TAG, printData("sessionVector", sessionVector));
+        byte[] sesAuthMasterKey = lrpAuthentication.calculateCmac(updatedKey00, sessionVector, 16,false);
+        byte[] sesAuthMasterKeyExp = hexStringToByteArray("132D7E6F35BA861F39B37221214E25A5");
+        //if (!lrpAuthentication.compareTestValues(sesAuthMasterKey, sesAuthMasterKeyExp, "sesAuthMasterKey", true)) return false;
+        Log.d(TAG, "*** Generation of KSesAuthMaster VERIFIED ***");
 
+        // step 38 ff Generation of Secret Plaintexts for this Session (SesAuthSPT)
+        byte[][] sesAuthSPTs = lrpAuthentication.generate_plaintexts(sesAuthMasterKey);
+        Log.d(TAG, "generate sesAuthSPTs");
+        for (int i = 0; i < sesAuthSPTs.length; i++) {
+            //Log.d(TAG, "i: " + i + printData(" SPT", sesAuthSPTs[i]));
+        }
+        // validate just sesAuthSPT 15
+        byte[] sesAuthSPT15 = sesAuthSPTs[15];
+        byte[] sesAuthSPT15Exp = Utils.hexStringToByteArray("6ba505793cb49fe3f81a2e420807e9a7");
+        //if (!lrpAuthentication.compareTestValues(sesAuthSPT15, sesAuthSPT15Exp, "sesAuthSPT15", true)) return false;
 
-/*
-        // now we know that we can work with the response, 16 bytes long
-        // R-APDU (Part 1) (E(Kx, RndB)) || SW1 || SW2
-        //byte[] rndB_enc =  getData(response);
-        byte[] rndB_enc = Arrays.copyOfRange(getData(response), 1, response.length - 2);
-        log(methodName, printData("encryptedRndB", rndB_enc));
+        // step 5 ff Generation of Session Keys
+        byte[][] sesKeys = lrpAuthentication.generate_updated_keys(sesAuthMasterKey);
+        Log.d(TAG, "generate sesKeys");
+        for (int i = 0; i < sesKeys.length; i++) {
+            //Log.d(TAG, "sesKey " + i + printData(" sesKey", sesKeys[i]));
+        }
+        // validate just keys 00 and 01
+        byte[] sesAuthMACUpdateKey = sesKeys[0];
+        byte[] sesAuthMACUpdateKeyExp = Utils.hexStringToByteArray("F56CADE598CC2A3FE47E438CFEB885DB");
+        //if (!lrpAuthentication.compareTestValues(sesAuthMACUpdateKey, sesAuthMACUpdateKeyExp, "sesAuthMACUpdateKey", true)) return false;
+        byte[] sesAuthENCUpdateKey = sesKeys[1];
+        byte[] sesAuthENCUpdateKeyExp = Utils.hexStringToByteArray("E9043D65AB21C0C422781099AB25EFDD");
+        //if (!lrpAuthentication.compareTestValues(sesAuthENCUpdateKey, sesAuthENCUpdateKeyExp, "sesAuthENCUpdateKey", true)) return false;
+        // update keys are fine
 
-        // start the decryption
-        //byte[] iv0 = new byte[8];
-        byte[] iv0 = new byte[16];
-        log(methodName, "step 02 iv0 is 16 zero bytes " + printData("iv0", iv0));
-        log(methodName, "step 03 decrypt the encryptedRndB using AES.decrypt with key " + printData("key", key) + printData(" iv0", iv0));
-        byte[] rndB = AES.decrypt(iv0, key, rndB_enc);
-        log(methodName, printData("rndB", rndB));
+        // step 15 concatenate rndA || rndB
+        byte[] rndArndB = concatenate(rndA, rndB);
+        Log.d(TAG, printData("rndA", rndA));
+        Log.d(TAG, printData("rndB", rndB));
+        Log.d(TAG, printData("rndArndB", rndArndB));
+        byte[] rndArndBExp = Utils.hexStringToByteArray("74D7DF6A2CEC0B72B412DE0D2B1117E656109A31977C855319CD4618C9D2AED2");
+        //if (!lrpAuthentication.compareTestValues(rndArndB, rndArndBExp, "rndArndB", true)) return false;
 
-        log(methodName, "step 04 rotate rndB to LEFT");
-        byte[] rndB_leftRotated = rotateLeft(rndB);
-        log(methodName, printData("rndB_leftRotated", rndB_leftRotated));
+        // step 19 PCDResponse = MAC_LRP (KSesAuthMACKey; RNDA || RNDB)
 
-        // authenticate 2nd part
-        log(methodName, "step 05 generate a random rndA");
-        byte[] rndA = new byte[16]; // this is an AES key
-        rndA = getRandomData(rndA);
-        log(methodName, printData("rndA", rndA));
+        initSuccess = lrpAuthentication._init(sesAuthMasterKey, 0, counter, true, true);
+        Log.d(TAG, "initSuccess: " + initSuccess);
 
-        log(methodName, "step 06 concatenate rndA | rndB_leftRotated");
-        byte[] rndArndB_leftRotated = concatenate(rndA, rndB_leftRotated);
-        log(methodName, printData("rndArndB_leftRotated", rndArndB_leftRotated));
+        // verify created sesPts etc
+        // step 38 ff Generation of Secret Plaintexts for this Session (SesAuthSPT)
+        byte[][] sesAuthSPTsN = lrpAuthentication.getP();
+        Log.d(TAG, "generate sesAuthSPTsN");
+        for (int i = 0; i < sesAuthSPTsN.length; i++) {
+            Log.d(TAG, "i: " + i + printData(" SPT", sesAuthSPTs[i]));
+        }
+        // validate just sesAuthSPT 15
+        byte[] sesAuthSPT15N = sesAuthSPTsN[15];
+        byte[] sesAuthSPT15NExp = Utils.hexStringToByteArray("6ba505793cb49fe3f81a2e420807e9a7");
+        //if (!lrpAuthentication.compareTestValues(sesAuthSPT15N, sesAuthSPT15NExp, "sesAuthSPT15N", true)) return false;
 
-        // IV is now encrypted RndB received from the tag
-        log(methodName, "step 07 iv1 is 16 zero bytes");
-        byte[] iv1 = new byte[16];
-        log(methodName, printData("iv1", iv1));
+        // step 5 ff Generation of Session Keys
+        byte[][] sesKeysN = lrpAuthentication.getKu();
+        Log.d(TAG, "generate sesKeysN");
+        for (int i = 0; i < sesKeysN.length; i++) {
+            Log.d(TAG, "sesKeyN " + i + printData(" sesKeyN", sesKeysN[i]));
+        }
+        // validate just keys 00 and 01
+        byte[] sesAuthMACUpdateKeyN = sesKeysN[0];
+        byte[] sesAuthMACUpdateKeyNExp = Utils.hexStringToByteArray("F56CADE598CC2A3FE47E438CFEB885DB");
+        //if (!lrpAuthentication.compareTestValues(sesAuthMACUpdateKeyN, sesAuthMACUpdateKeyNExp, "sesAuthMACUpdateKeyN", true)) return false;
+        byte[] sesAuthENCUpdateKeyN = sesKeysN[1];
+        byte[] sesAuthENCUpdateKeyNExp = Utils.hexStringToByteArray("E9043D65AB21C0C422781099AB25EFDD");
+        //if (!lrpAuthentication.compareTestValues(sesAuthENCUpdateKeyN, sesAuthENCUpdateKeyNExp, "sesAuthENCUpdateKeyN", true)) return false;
+        // keys are fine
 
-        // Encrypt RndAB_rot
-        log(methodName, "step 08 encrypt rndArndB_leftRotated using AES.encrypt and iv1");
-        byte[] rndArndB_leftRotated_enc = AES.encrypt(iv1, key, rndArndB_leftRotated);
-        log(methodName, printData("rndArndB_leftRotated_enc", rndArndB_leftRotated_enc));
+        Log.d(TAG, printData("sesAuthMACUpdateKeyN", sesAuthMACUpdateKeyN));
+        Log.d(TAG, printData("rndArndB", rndArndB));
+        byte[] pcdResponse = lrpAuthentication.calculateCmac(sesAuthMACUpdateKeyN, rndArndB, 16, false);
+        //byte[] pcdResponse = lrpAuthentication.calculateCmac(key, rndArndB, 16, false);
+        Log.d(TAG, printData("pcdResponse", pcdResponse));
+        byte[] pcdResponseExp = Utils.hexStringToByteArray("89B59DCEDC31A3D3F38EF8D4810B3B4");
+        //if (!lrpAuthentication.compareTestValues(pcdResponse, pcdResponseExp, "pcdResponse", true)) return false;
+        // concatenate data = RndA || PCDResponse
+        byte[] data = concatenate(rndA, pcdResponse);
 
-        // send encrypted data to PICC
-        log(methodName, "step 09 send the encrypted data to the PICC");
+        // now we are sending the data to the picc
         try {
-            apdu = wrapMessage(GET_ADDITIONAL_FRAME_COMMAND, rndArndB_leftRotated_enc);
-            log(methodName, "send rndArndB_leftRotated_enc " + printData("apdu", apdu));
-            response = isoDep.transceive(apdu);
-
-            // todo THIS step is FAILING with AE error
-
-            log(methodName, "send rndArndB_leftRotated_enc " + printData("response", response));
+            apdu = wrapMessage(GET_ADDITIONAL_FRAME_COMMAND, data);
         } catch (IOException e) {
-            Log.e(TAG, methodName + " transceive failed, IOException:\n" + e.getMessage());
-            log(methodName, "IOException: " + e.getMessage());
-            System.arraycopy(RESPONSE_FAILURE, 0, errorCode, 0, 2);
+            Log.e(TAG, "IOException: " + e.getMessage());
             return false;
         }
-        responseBytes = returnStatusBytes(response);
-        System.arraycopy(responseBytes, 0, errorCode, 0, 2);
-        // we are expecting that the status code is 0x00 means the exchange was OK
-        if (!checkResponse(responseBytes)) {
-            log(methodName, "expected to get get 0x00 as error code but  found: " + printData("errorCode", responseBytes) + ", aborted");
-            System.arraycopy(responseBytes, 0, errorCode, 0, 2);
-            return false;
-        }
-        // now we know that we can work with the response, response is 32 bytes long
-        // R-APDU (Part 2) E(Kx, TI || RndA' || PDcap2 || PCDcap2) || Response Code
-        log(methodName, "step 10 received encrypted data from PICC");
-        byte[] data_enc = getData(response);
-        log(methodName, printData("data_enc", data_enc));
+        response = sendData(apdu);
 
-        //IV is now reset to zero bytes
-        log(methodName, "step 11 iv2 is 16 zero bytes");
-        byte[] iv2 = new byte[16];
-        log(methodName, printData("iv2", iv2));
+        Log.d(TAG, "*** ENDED SO FAR ***");
 
-        // Decrypt encrypted data
-        log(methodName, "step 12 decrypt data_enc with iv2 and key");
-        byte[] data = AES.decrypt(iv2, key, data_enc);
-        log(methodName, printData("data", data));
-*/
-        // data is 32 bytes long, e.g. a1487b61f69cef65a09742b481152325a7cb8fc6000000000000000000000000
-        /**
-         * structure of data
-         * full example a1487b61f69cef65a09742b481152325a7cb8fc6000000000000000000000000
-         *
-         * TI transaction information 04 bytes a1487b61
-         * rndA LEFT rotated          16 bytes f69cef65a09742b481152325a7cb8fc6
-         * PDcap2                     06 bytes 000000000000
-         * PCDcap2                    06 bytes 000000000000
-         */
-/*
-        // split data
-        byte[] ti = new byte[4]; // LSB notation
-        byte[] rndA_leftRotated = new byte[16];
-        byte[] pDcap2 = new byte[6];
-        byte[] pCDcap2 = new byte[6];
-        System.arraycopy(data, 0, ti, 0, 4);
-        System.arraycopy(data, 4, rndA_leftRotated, 0, 16);
-        System.arraycopy(data, 20, pDcap2, 0, 6);
-        System.arraycopy(data, 26, pCDcap2, 0, 6);
-        log(methodName, "step 13 full data needs to get split up in 4 values");
-        log(methodName, printData("data", data));
-        log(methodName, printData("ti", ti));
-        log(methodName, printData("rndA_leftRotated", rndA_leftRotated));
-        log(methodName, printData("pDcap2", pDcap2));
-        log(methodName, printData("pCDcap2", pCDcap2));
 
-        // PCD compares send and received RndA
-        log(methodName, "step 14 rotate rndA_leftRotated to RIGHT");
-        byte[] rndA_received = rotateRight(rndA_leftRotated);
-        log(methodName, printData("rndA_received ", rndA_received));
-        boolean rndAEqual = Arrays.equals(rndA, rndA_received);
-        //log(methodName, printData("rndA received ", rndA_received));
-        log(methodName, printData("rndA          ", rndA));
-        log(methodName, "rndA and rndA received are equal: " + rndAEqual);
-        log(methodName, printData("rndB          ", rndB));
-
-        log(methodName, "**** auth result ****");
-        if (rndAEqual) {
-            log(methodName, "*** AUTHENTICATED ***");
-            SesAuthENCKey = getSesAuthEncKey(rndA, rndB, key);
-            SesAuthMACKey = getSesAuthMacKey(rndA, rndB, key);
-            log(methodName, printData("SesAuthENCKey ", SesAuthENCKey));
-            log(methodName, printData("SesAuthMACKey ", SesAuthMACKey));
-            CmdCounter = 0;
-            TransactionIdentifier = ti.clone();
-            authenticateEv2FirstSuccess = true;
-            keyNumberUsedForAuthentication = keyNo;
-        } else {
-            log(methodName, "****   FAILURE   ****");
-            invalidateAllData();
-        }
-        log(methodName, "*********************");
-        return rndAEqual;
-
- */
         return false;
     }
 
