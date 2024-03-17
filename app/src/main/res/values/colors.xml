@@ -8,4 +8,5 @@
     <color name="light_background_green">#C0FFC0</color>
     <color name="light_background_red">#FFB5B5</color>
     <color name="application_color_light_background_orange">#FFB74D</color>
+    <color name="application_color_light_background_green">#81C784</color>
 </resources>

@@ -68,8 +68,8 @@
                     android:layout_height="wrap_content"
                     android:ellipsize="end"
                     android:focusable="false"
-                    android:typeface="monospace"
                     android:text="choose an operation ..."
+                    android:typeface="monospace"
                     tools:ignore="KeyboardInaccessibleWidget" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -149,7 +149,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:ellipsize="end"
-                    android:focusable="true"
+                    android:focusable="false"
                     android:text="select a file ..."
                     tools:ignore="KeyboardInaccessibleWidget" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -202,9 +202,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:ellipsize="end"
+                        android:focusable="false"
                         android:maxLines="1"
                         android:text=""
-                        android:focusable="false"
                         tools:ignore="KeyboardInaccessibleWidget" />
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -247,8 +247,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginRight="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:text="select" />
 
                     <Button
@@ -366,8 +366,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginRight="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:text="file settings" />
 
                     <Button
@@ -375,8 +375,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:enabled="true"
                         android:text="chg file sett" />
 
@@ -488,8 +488,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginRight="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:text="A0 auth" />
 
                     <Button
@@ -497,8 +497,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:text="A1 auth" />
 
                     <Button
@@ -506,8 +506,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:text="A2 auth" />
 
                     <Button
@@ -515,8 +515,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:text="A3 auth" />
 
                     <Button
@@ -524,8 +524,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:text="A4 auth" />
 
                 </LinearLayout>
@@ -550,8 +550,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginRight="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:text="0 auth" />
 
                     <Button
@@ -559,8 +559,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:text="1 auth" />
 
                     <Button
@@ -568,8 +568,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:text="2 auth" />
 
                     <Button
@@ -577,8 +577,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:text="3 auth" />
 
                     <Button
@@ -586,8 +586,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:text="4 auth" />
 
                 </LinearLayout>
@@ -612,8 +612,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginRight="8dp"
-                        android:backgroundTint="@color/light_background_red"
                         android:layout_weight="1"
+                        android:backgroundTint="@color/light_background_red"
                         android:text="0" />
 
                     <Button
@@ -621,8 +621,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:text="1" />
 
                     <Button
@@ -630,8 +630,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:text="2" />
 
                     <Button
@@ -639,8 +639,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:text="3" />
 
                     <Button
@@ -648,8 +648,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:text="4" />
 
                 </LinearLayout>
@@ -932,8 +932,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginRight="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:text="read 3" />
 
                     <Button
@@ -941,8 +941,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:text="write 3" />
 
                     <Button
@@ -950,8 +950,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:text="x" />
 
                 </LinearLayout>
@@ -966,8 +966,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginRight="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:text="read 2" />
 
                     <Button
@@ -975,8 +975,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:text="write 2" />
 
                     <Button
@@ -988,6 +988,109 @@
                         android:text="read O" />
 
                 </LinearLayout>
+
+                <com.google.android.material.divider.MaterialDivider
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    app:dividerInsetEnd="8dp"
+                    app:dividerInsetStart="8dp" />
+
+                <!-- section for experimental read, write, change filesettings -->
+
+                <TextView
+                    android:id="@+id/tvStandardFilesExperimental"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="10dp"
+                    android:text="Standard File 2 Playground"
+                    android:textAlignment="center"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnNtag424ReadStandardFile2Plain"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginRight="8dp"
+                        android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_green"
+                        android:text="read 2 Plain" />
+
+                    <Button
+                        android:id="@+id/btnNtag424WriteStandardFile2Plain"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="8dp"
+                        android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_green"
+                        android:text="write 2 Plain" />
+
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnNtag424GetFileSettings2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginRight="0dp"
+                    android:backgroundTint="@color/application_color_light_background_green"
+                    android:text="get File Settings 2" />
+
+                <Button
+                    android:id="@+id/btnNtag424ChangeFileSettings2ToEnc"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginRight="0dp"
+                    android:backgroundTint="@color/application_color_light_background_green"
+                    android:text="change COMM 2 -> Enc" />
+
+                <Button
+                    android:id="@+id/btnNtag424ChangeFileSettings2ToPlain"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="0dp"
+                    android:backgroundTint="@color/application_color_light_background_green"
+                    android:text="change COMM 2 -> Plain" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnNtag424ReadStandardFile2Enc"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginRight="8dp"
+                        android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_green"
+                        android:text="read 2 Enc" />
+
+                    <Button
+                        android:id="@+id/btnNtag424WriteStandardFile2Enc"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="8dp"
+                        android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_green"
+                        android:text="write 2 Enc" />
+
+                </LinearLayout>
+
+
+                <!-- END section for experimental read, write, change filesettings -->
+
+                <com.google.android.material.divider.MaterialDivider
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    app:dividerInsetEnd="8dp"
+                    app:dividerInsetStart="8dp" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/etFileStandardFileIdLayout"
@@ -1745,8 +1848,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
-                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:layout_weight="1"
+                        android:backgroundTint="@color/application_color_light_background_orange"
                         android:text="get key version" />
 
                     <Button

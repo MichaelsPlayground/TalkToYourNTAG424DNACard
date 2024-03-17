@@ -1,6 +1,5 @@
 package de.androidcrypto.talktoyourntag424dnacard;
 
-import static de.androidcrypto.talktoyourntag424dnacard.Utils.byteArrayLength4InversedToInt;
 import static de.androidcrypto.talktoyourntag424dnacard.Utils.byteToHex;
 import static de.androidcrypto.talktoyourntag424dnacard.Utils.bytesToHexNpeUpperCase;
 import static de.androidcrypto.talktoyourntag424dnacard.Utils.bytesToHexNpeUpperCaseBlank;
@@ -92,7 +91,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
 
     private Button selectApplicationEv2, getAllFileIdsEv2, getAllFileSettingsEv2, completeFileSettingsEv2;
 
-    private Button authD0AEv2, authD2AEv2, authD3AEv2, authD3ACEv2;
+    private Button authD0AEv2, authD2AEv2, authD3AEv2, authD3ACEv2, authD4AEv2;
     private Button getCardUidEv2, getFileSettingsEv2;
     private Button fileStandardCreateEv2, fileStandardWriteEv2, fileStandardReadEv2;
 
@@ -121,6 +120,15 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     private Button fileStandardWrite2, fileStandardWrite3, fileStandardRead, fileStandardRead2, fileStandardRead3;
     private com.google.android.material.textfield.TextInputEditText fileStandardFileId, fileStandardSize, fileStandardData;
     RadioButton rbFileFreeAccess, rbFileKeySecuredAccess;
+
+    /**
+     * section for Experimental NTAG424 Standard File 2 handling
+     */
+
+    private Button readStandardFile2Plain, writeStandardFile2Plain, readStandardFile2Enc, writeStandardFile2Enc;
+    private Button getFileSettings2, changeStandardFileSettings2CommToEnc, changeStandardFileSettings2CommToPlain;
+
+
 
     /**
      * section for authentication
@@ -333,6 +341,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         authD0AEv2 = findViewById(R.id.btnAuthD0AEv2);
         authD2AEv2 = findViewById(R.id.btnAuthD2AEv2);
         authD3AEv2 = findViewById(R.id.btnAuthD3AEv2);
+        authD4AEv2 = findViewById(R.id.btnAuthD4AEv2);
         authD3ACEv2 = findViewById(R.id.btnAuthD3ACEv2);
         getCardUidEv2 = findViewById(R.id.btnGetCardUidEv2);
         getFileSettingsEv2 = findViewById(R.id.btnGetFileSettingsEv2);
@@ -368,6 +377,15 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         fileStandardFileId = findViewById(R.id.etFileStandardFileId);
         fileStandardSize = findViewById(R.id.etFileStandardSize);
         fileStandardData = findViewById(R.id.etFileStandardData);
+
+        // experimental Standard File 2 handling
+        readStandardFile2Plain = findViewById(R.id.btnNtag424ReadStandardFile2Plain);
+        writeStandardFile2Plain = findViewById(R.id.btnNtag424WriteStandardFile2Plain);
+        readStandardFile2Enc = findViewById(R.id.btnNtag424ReadStandardFile2Enc);
+        writeStandardFile2Enc = findViewById(R.id.btnNtag424WriteStandardFile2Enc);
+        getFileSettings2 = findViewById(R.id.btnNtag424GetFileSettings2);
+        changeStandardFileSettings2CommToEnc = findViewById(R.id.btnNtag424ChangeFileSettings2ToEnc);
+        changeStandardFileSettings2CommToPlain = findViewById(R.id.btnNtag424ChangeFileSettings2ToPlain);
 
         // authentication handling DEFAULT keys
         authKey0D = findViewById(R.id.btnAuthKey0D);
@@ -540,6 +558,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                     writeToUiAppend(output, logString + " SUCCESS");
                     writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
                     selectedApplicationId = ntag424DnaMethods.getNTAG_424_DNA_DF_APPLICATION_NAME().clone();
+                    applicationSelected.setText(Utils.bytesToHexNpeUpperCase(selectedApplicationId));
                     vibrateShort();
                 } else {
                     writeToUiAppend(output, logString + " FAILURE");
@@ -740,50 +759,6 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 }
 
                 boolean success = runAuthentication(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_AES_DEFAULT);
-
-                /*
-                // run a self test
-                //boolean getSesAuthKeyTestResult = desfireAuthenticateEv2.getSesAuthKeyTest();
-                //writeToUiAppend(output, "getSesAuthKeyTestResult: " + getSesAuthKeyTestResult);
-
-                exportString = "";
-                exportStringFileName = "auth.html";
-
-                byte[] responseData = new byte[2];
-                boolean success = ntag424DnaMethods.authenticateAesEv2First(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_AES_DEFAULT);
-
-                // just a short test on LRP, is working but running "old" AES secure messaging as long the card is not in LRP mode
-                //boolean success = ntag424DnaMethods.authenticateLrpEv2First(APPLICATION_KEY_MASTER_NUMBER, APPLICATION_KEY_MASTER_AES_DEFAULT);
-
-                responseData = ntag424DnaMethods.getErrorCode();
-                if (success) {
-                    writeToUiAppend(output, logString + " SUCCESS");
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
-                    SES_AUTH_ENC_KEY = ntag424DnaMethods.getSesAuthENCKey();
-                    SES_AUTH_MAC_KEY = ntag424DnaMethods.getSesAuthMACKey();
-                    TRANSACTION_IDENTIFIER = ntag424DnaMethods.getTransactionIdentifier();
-                    CMD_COUNTER = ntag424DnaMethods.getCmdCounter();
-                    writeToUiAppend(output, printData("SES_AUTH_ENC_KEY", SES_AUTH_ENC_KEY));
-                    writeToUiAppend(output, printData("SES_AUTH_MAC_KEY", SES_AUTH_MAC_KEY));
-                    writeToUiAppend(output, printData("TRANSACTION_IDENTIFIER", TRANSACTION_IDENTIFIER));
-                    writeToUiAppend(output, "CMD_COUNTER: " + CMD_COUNTER);
-                    writeToUiAppend(output, "key used for auth: " + ntag424DnaMethods.getKeyNumberUsedForAuthentication());
-                    vibrateShort();
-                    // show logData
-
-                    // prepare data for export
-                    exportString = ntag424DnaMethods.getLogData();
-                    exportStringFileName = "auth0a_ev2.html";
-                    writeToUiToast("your authentication log file is ready for export");
-
-                    //showDialog(MainActivity.this, desfireAuthenticateProximity.getLogData());
-
-
-                } else {
-                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with error code: " + Utils.bytesToHexNpeUpperCase(responseData), COLOR_RED);
-                }
-
-                 */
             }
         });
 
@@ -920,6 +895,16 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 }
             }
         });
+
+        authD4AEv2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // authenticate with access key = 04...
+                clearOutputFields();
+                runAuthentication(APPLICATION_KEY_4_NUMBER, APPLICATION_KEY_4_AES_DEFAULT);
+            }
+        });
+
 
         testEnableLrpMode.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -1613,6 +1598,195 @@ Step Command                       Data message
         });
 
         /**
+         * section for experimental NTAG424 Standard File 2 handling
+         */
+
+        readStandardFile2Plain.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "read standard file 2 Plain";
+                writeToUiAppend(output, logString);
+
+                // check that an application was selected before
+                if (selectedApplicationId == null) {
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
+                    return;
+                }
+                byte[] fileContent = ntag424DnaMethods.readStandardFilePlain((byte) 0x02, 0, 19);
+                if ((fileContent == null) || (fileContent.length < 1)) {
+                    writeToUiAppend(output, logString + " FAILURE");
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with ErrorCode " +
+                            EV3.getErrorCode(ntag424DnaMethods.getErrorCode()), COLOR_RED);
+                    return;
+                } else {
+                    writeToUiAppend(output, "fileNumber: " + 2 + "\n" +
+                            Utils.printData("fileContent", fileContent));
+                    writeToUiAppend(output, new String(fileContent, StandardCharsets.UTF_8));
+                    writeToUiAppend(output, outputDivider);
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
+                    vibrateShort();
+                }
+            }
+        });
+
+        writeStandardFile2Plain.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "write to Standard file 2 Plain";
+                writeToUiAppend(output, logString);
+
+                byte[] dataToWrite = Utils.getTimestamp().getBytes(StandardCharsets.UTF_8);
+
+                if ((dataToWrite != null) && (dataToWrite.length > 0)) {
+                    boolean success = ntag424DnaMethods.writeStandardFilePlain((byte) 0x02, dataToWrite, 0, dataToWrite.length);
+                    writeToUiAppend(output, "PLAIN_MODE result: " + success);
+                    if (success) {
+                        writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
+                        vibrateShort();
+                    } else {
+                        writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with ErrorCode " +
+                                EV3.getErrorCode(ntag424DnaMethods.getErrorCode()), COLOR_RED);
+                    }
+                }
+            }
+        });
+
+        readStandardFile2Enc.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "read standard file 2 Enc";
+                writeToUiAppend(output, logString);
+
+                // check that an application was selected before
+                if (selectedApplicationId == null) {
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, "you need to select an application first", COLOR_RED);
+                    return;
+                }
+                // length test
+                byte[] fileContent = ntag424DnaMethods.readStandardFileFull((byte) 0x02, 0, 239); // working
+                //byte[] fileContent = ntag424DnaMethods.readStandardFileFull((byte) 0x02, 0, 240); // failing
+                if ((fileContent == null) || (fileContent.length < 1)) {
+                    writeToUiAppend(output, logString + " FAILURE");
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with ErrorCode " +
+                            EV3.getErrorCode(ntag424DnaMethods.getErrorCode()), COLOR_RED);
+                    return;
+                } else {
+                    writeToUiAppend(output, "fileNumber: " + 2 + "\n" +
+                            Utils.printData("fileContent", fileContent));
+                    writeToUiAppend(output, new String(fileContent, StandardCharsets.UTF_8));
+                    writeToUiAppend(output, outputDivider);
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
+                    vibrateShort();
+                }
+            }
+        });
+
+        writeStandardFile2Enc.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "write to Standard file 2 Enc";
+                writeToUiAppend(output, logString);
+
+                byte[] dataToWrite = Utils.getTimestamp().getBytes(StandardCharsets.UTF_8);
+
+                if ((dataToWrite != null) && (dataToWrite.length > 0)) {
+                    boolean success = ntag424DnaMethods.writeStandardFileFull((byte) 0x02, dataToWrite, 0, dataToWrite.length, false);
+                    writeToUiAppend(output, "FULL_MODE result: " + success);
+                    if (success) {
+                        writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
+                        vibrateShort();
+                    } else {
+                        writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with ErrorCode " +
+                                EV3.getErrorCode(ntag424DnaMethods.getErrorCode()), COLOR_RED);
+                    }
+                }
+            }
+        });
+
+        getFileSettings2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                FileSettings[] allFileSettings = ntag424DnaMethods.getAllFileSettings();
+                if (allFileSettings != null) {
+                    FileSettings fileSettingsStandardFile2 = allFileSettings[1];
+                    writeToUiAppend(output, "file settings:\n" + fileSettingsStandardFile2.dump());
+                    System.out.println("file settings:\n" + fileSettingsStandardFile2.dump());
+                } else {
+                    writeToUiAppend(output, "no file settings available");
+                }
+                vibrateShort();
+            }
+        });
+
+        changeStandardFileSettings2CommToEnc.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "Change File 2 CommSettings to ENC 0000";
+                // this will change the communication settings for Standard File 2 to Encrypted Communication and Change all keys to key nr 0
+                byte fileNumber = (byte) 0x02;
+                Ntag424DnaMethods.CommunicationSettings communicationSettings = Ntag424DnaMethods.CommunicationSettings.Full;
+                boolean result = ntag424DnaMethods.changeFileSettings(fileNumber, communicationSettings, 0, 0, 0, 0, false);
+                if (!result) {
+                    writeToUiAppend(output, logString + " FAILURE");
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with ErrorCode " +
+                            EV3.getErrorCode(ntag424DnaMethods.getErrorCode()), COLOR_RED);
+                    return;
+                } else {
+                    writeToUiAppend(output, logString + " SUCCESS");
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
+                    vibrateShort();
+                }
+            }
+        });
+
+        changeStandardFileSettings2CommToPlain.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "Change File 2 CommSettings to Plain E0EE";
+                // this will change the communication settings for Standard File 2 to Encrypted Communication and Change all keys to key nr 0
+                byte fileNumber = (byte) 0x02;
+                Ntag424DnaMethods.CommunicationSettings communicationSettings = Ntag424DnaMethods.CommunicationSettings.Plain;
+                boolean result = ntag424DnaMethods.changeFileSettings(fileNumber, communicationSettings, 14, 0, 14, 14, false);
+                if (!result) {
+                    writeToUiAppend(output, logString + " FAILURE");
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with ErrorCode " +
+                            EV3.getErrorCode(ntag424DnaMethods.getErrorCode()), COLOR_RED);
+                    return;
+                } else {
+                    writeToUiAppend(output, logString + " SUCCESS");
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
+                    vibrateShort();
+                }
+            }
+        });
+
+/*
+Changed File Settings:
+file settings:
+fileNumber: 02
+fileType: 0 (Standard)
+communicationSettings: 03 (Encrypted)
+accessRights RW | CAR: 00
+accessRights R  | W:   00
+accessRights RW:       0
+accessRights CAR:      0
+accessRights R:        0
+accessRights W:        0
+fileSize: 256
+
+Default File Settings:
+ */
+
+
+
+        /**
          * section for authentication with DEFAULT AES keys
          */
 
@@ -1803,6 +1977,44 @@ Step Command                       Data message
                 }
             }
         });
+
+/*
+NTAG 424 DNA all file settings
+fileNumber: 01
+fileType: 0 (Standard)
+communicationSettings: 00 (Plain)
+accessRights RW | CAR: 00
+accessRights R  | W:   E0
+accessRights RW:       0
+accessRights CAR:      0
+accessRights R:        14
+accessRights W:        0
+fileSize: 32
+--------------
+fileNumber: 02
+fileType: 0 (Standard)
+communicationSettings: 00 (Plain)
+accessRights RW | CAR: 40
+accessRights R  | W:   E4
+accessRights RW:       4
+accessRights CAR:      0
+accessRights R:        14
+accessRights W:        4
+fileSize: 256
+--------------
+fileNumber: 03
+fileType: 0 (Standard)
+communicationSettings: 03 (Encrypted)
+accessRights RW | CAR: 30
+accessRights R  | W:   23
+accessRights RW:       3
+accessRights CAR:      0
+accessRights R:        2
+accessRights W:        3
+fileSize: 128
+--------------
+
+ */
 
         getFileSettingsMac.setOnClickListener(new View.OnClickListener() {
             @Override

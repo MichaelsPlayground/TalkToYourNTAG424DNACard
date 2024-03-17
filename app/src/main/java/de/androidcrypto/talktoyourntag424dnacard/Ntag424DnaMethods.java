@@ -326,7 +326,7 @@ public class Ntag424DnaMethods {
      * @param fileNumber
      * @return see NTAG 424 DNA and NTAG 424 DNA TagTamper features and hints AN12196.pdf pages 26-27
      */
-    private byte[] getFileSettings(byte fileNumber) {
+    public byte[] getFileSettings(byte fileNumber) {
         String logData = "";
         final String methodName = "getFileSettings";
         log(methodName, "started", true);
@@ -360,6 +360,7 @@ public class Ntag424DnaMethods {
             log(methodName, methodName + " SUCCESS");
             errorCode = RESPONSE_OK.clone();
             errorCodeReason = methodName + " SUCCESS";
+            CmdCounter++; // todo check on that !
             return getData(response);
         } else {
             log(methodName, methodName + " FAILURE");
@@ -3130,6 +3131,12 @@ Cmd.SetConfiguration C-APDU
         // see Mifare DESFire Light Features and Hints AN12343.pdf pages 55 - 58
         // Cmd.ReadData in AES Secure Messaging using CommMode.Full
         // this is based on the read of a data file on a DESFire Light card
+        // Don't tr to read more than 239 bytes in Full mode, as the encryption & mac overhead will exceed the maximum length
+        // see NTAG 424 DNA NT4H2421Gx.pdf pages 73 + 74:
+        // Read the entire StandardData file, starting from the position specified in the offset value. Note that the short length Le limits response data to 256 byte including secure messaging (if applicable).
+        // Response data parameters description - ReadData
+        // Response data: up to 256 byte including secure messaging
+
 
         // status
 
@@ -4435,7 +4442,11 @@ SV 2 = [0x5A][0xA5][0x00][0x01] [0x00][0x80][RndA[15:14] || [ (RndA[13:8] ⊕ Rn
     }
 
     private byte[] returnStatusBytes(byte[] data) {
-        return Arrays.copyOfRange(data, (data.length - 2), data.length);
+        if (data != null) {
+            return Arrays.copyOfRange(data, (data.length - 2), data.length);
+        } else {
+            return null;
+        }
     }
 
     /**
