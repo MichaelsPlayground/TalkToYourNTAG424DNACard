@@ -37,4 +37,11 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 
+    // for conversion python to java classes LRP
+    // https://mvnrepository.com/artifact/org.apache.commons/commons-lang3
+    implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.14.0'
+    // https://mvnrepository.com/artifact/commons-codec/commons-codec
+    implementation group: 'commons-codec', name: 'commons-codec', version: '1.16.1'
+
+
 }
