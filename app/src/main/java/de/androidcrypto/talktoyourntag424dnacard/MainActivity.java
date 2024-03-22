@@ -47,9 +47,6 @@ import androidx.appcompat.widget.Toolbar;
 
 import com.google.android.material.textfield.TextInputLayout;
 
-import net.bplearning.ntag424.DnaCommunicator;
-import net.bplearning.ntag424.TestTransceiver;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -131,6 +128,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     private Button readStandardFile2Plain, writeStandardFile2Plain, readStandardFile2Enc, writeStandardFile2Enc;
     private Button getFileSettings2, changeStandardFileSettings2CommToEnc, changeStandardFileSettings2CommToPlain;
 
+    private Button setAllFileSettingsFabric;
 
 
     /**
@@ -304,10 +302,6 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     private Activity activity;
     private Ntag424DnaMethods ntag424DnaMethods;
 
-    // library https://github.com/johnnyb/ntag424-java
-
-    private Button dna1, dna2, dna3, dna4;
-    DnaCommunicator dnaC = new DnaCommunicator();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -394,6 +388,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         getFileSettings2 = findViewById(R.id.btnNtag424GetFileSettings2);
         changeStandardFileSettings2CommToEnc = findViewById(R.id.btnNtag424ChangeFileSettings2ToEnc);
         changeStandardFileSettings2CommToPlain = findViewById(R.id.btnNtag424ChangeFileSettings2ToPlain);
+        setAllFileSettingsFabric = findViewById(R.id.btnNtag424SetAllFileSettingsFabric);
 
         // authentication handling DEFAULT keys
         authKey0D = findViewById(R.id.btnAuthKey0D);
@@ -465,38 +460,6 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         fileStandardFileId.setText(String.valueOf((int) STANDARD_FILE_FREE_ACCESS_ID)); // preset is FREE ACCESS
 
         activity = MainActivity.this;
-
-        // https://github.com/johnnyb/ntag424-java
-        dna1 = findViewById(R.id.btnDna1);
-        dna2 = findViewById(R.id.btnDna2);
-        dna3 = findViewById(R.id.btnDna3);
-        dna4 = findViewById(R.id.btnDna4);
-
-        dna1.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                System.out.println("DNA 1");
-                try {
-                    dnaC = new DnaCommunicator();
-                    dnaC.beginCommunication();
-                    TestTransceiver transceiver = new TestTransceiver();
-                    dnaC.setTransceiver(transceiver);
-                    dnaC.beginCommunication();
-                    byte[] result = transceiver.recordedRequests.get(0);
-                    System.out.println(printData("result", result));
-                    byte[] expectedResult = new byte[] {0x00,(byte)0xa4,0x00,0x0c,0x02,(byte)0xe1,0x10,0x00};
-                    System.out.println(printData("expRes", expectedResult));
-                    if (Arrays.equals(result, expectedResult)) {
-                        System.out.println("MATCHING");
-                    } else {
-                        System.out.println("FAILURE");
-                    }
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        });
-
 
         /**
          * just es quick test button
@@ -1802,6 +1765,53 @@ Step Command                       Data message
                     writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
                     vibrateShort();
                 }
+            }
+        });
+
+        setAllFileSettingsFabric.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearOutputFields();
+                String logString = "Set All File Settings to Fabric";
+                // get all file settings for the CAR right
+                clearOutputFields();
+                FileSettings[] allFileSettings = ntag424DnaMethods.getAllFileSettings();
+                if (allFileSettings != null) {
+                    FileSettings fileSettingsStandardFile2 = allFileSettings[1];
+                    writeToUiAppend(output, "file settings:\n" + fileSettingsStandardFile2.dump());
+                    System.out.println("file settings:\n" + fileSettingsStandardFile2.dump());
+                } else {
+                    writeToUiAppend(output, "no file settings available");
+                    return;
+                }
+                // car key for file 1
+                FileSettings fileSettingsStandardFile1 = allFileSettings[0];
+                FileSettings fileSettingsStandardFile2 = allFileSettings[1];
+                FileSettings fileSettingsStandardFile3 = allFileSettings[2];
+                int file1Car = fileSettingsStandardFile1.getAccessRightsCar();
+                int file2Car = fileSettingsStandardFile2.getAccessRightsCar();
+                int file3Car = fileSettingsStandardFile3.getAccessRightsCar();
+                writeToUiAppend(output, "CAR key for file 1: " + file1Car + " | " +
+                        "file 2: " + file2Car + " | " + "file 3: " + file3Car);
+                // auth with file 1
+                authD0AEv2.performClick();
+
+                // this will change the settings for Standard File 1
+                byte fileNumber = (byte) 0x01;
+                Ntag424DnaMethods.CommunicationSettings communicationSettings = Ntag424DnaMethods.CommunicationSettings.Plain;
+                boolean result = ntag424DnaMethods.changeFileSettings(fileNumber, communicationSettings, 0, 0, 14, 0, false);
+                if (!result) {
+                    writeToUiAppend(output, logString + " FAILURE");
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " FAILURE with ErrorCode " +
+                            EV3.getErrorCode(ntag424DnaMethods.getErrorCode()), COLOR_RED);
+                    return;
+                } else {
+                    writeToUiAppend(output, logString + " SUCCESS");
+                    writeToUiAppendBorderColor(errorCode, errorCodeLayout, logString + " SUCCESS", COLOR_GREEN);
+                    vibrateShort();
+                }
+
+
             }
         });
 
@@ -3948,11 +3958,11 @@ C1h =
                     isoDep.close();
                     return;
                 }
-                desfireAuthenticate = new DesfireAuthenticate(isoDep, true); // true means all data is logged
+                //desfireAuthenticate = new DesfireAuthenticate(isoDep, true); // true means all data is logged
 
                 //desfireAuthenticateProximity = new DesfireAuthenticateProximity(isoDep, true); // true means all data is logged
-                desfireAuthenticateLegacy = new DesfireAuthenticateLegacy(isoDep, true); // true means all data is logged
-                desfireAuthenticateEv2 = new DesfireAuthenticateEv2(isoDep, true); // true means all data is logged
+                //desfireAuthenticateLegacy = new DesfireAuthenticateLegacy(isoDep, true); // true means all data is logged
+                //desfireAuthenticateEv2 = new DesfireAuthenticateEv2(isoDep, true); // true means all data is logged
 
                 // setup the communication adapter
                 //adapter = new CommunicationAdapter(isoDep, true);
